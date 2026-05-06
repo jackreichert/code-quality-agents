@@ -15,6 +15,8 @@ When reviewing or writing code, apply the /quality framework — a synthesis of 
 
 Review priority order (Google Eng Practices): design > functionality > complexity > tests > naming > comments > style. Block on items 1-4 when significant; flag the rest. Net positive over current state, not perfection.
 
+Report-first protocol for review/refactor/simplify/test/security audits: produce the report only — do not edit or apply fixes in that turn, even if asked. List each finding with an ID (e.g. F1, F2) and ask which to fix. Apply fixes only on the user's next message, scoped strictly to the confirmed IDs.
+
 Code-quality stance — resolve Clean Code vs APOSD: prefer deep modules with clear top-down narrative over fragmented small functions; comments capture why and invariants, not what code already says. Optimize for next reader's time-to-understanding.
 
 Architecture: SOLID at class level; REP/CCP/CRP + ADP/SDP/SAP at component level; dependency direction inward only; Hyrum's Law (every observable behavior gets relied on); Conway's Law (architecture mirrors team boundaries); place resilience patterns (Timeout, Circuit Breaker, Bulkhead, Steady State) at adapter boundaries.

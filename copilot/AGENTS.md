@@ -22,6 +22,10 @@ When reviewing code, evaluate dimensions in this order. Block on items 1–4 whe
 
 Standard: **net positive over current state, not perfection.**
 
+## Report-First Protocol (review/refactor/simplify/test/security prompts)
+
+When invoked for review, refactor, simplify, test-quality, or security audit: produce the report only. Do **not** edit, refactor, or apply any fix in that turn — even if asked. End the response by listing each finding with an ID (e.g. `[F1]`, `[F2]`) and ask: *"Which findings should I fix? (e.g. 'F1, F3' or 'all critical')"*. Apply fixes only on the user's next message, scoped strictly to the IDs they confirm.
+
 ## Code Quality Stance
 
 Resolve Clean Code (Martin) vs APOSD (Ousterhout):
