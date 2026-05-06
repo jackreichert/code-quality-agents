@@ -41,11 +41,15 @@ Resolve Clean Code (Martin) vs APOSD (Ousterhout):
 ## Testing
 
 - **Listen to the Tests** (GOOS): test pain is design feedback. Hard-to-write test → redesign production code, not the test
-- **F.I.R.S.T.** + AAA structure
-- Mock roles (interfaces) not objects (concrete classes); mock only externals
+- **Four Pillars** (Khorikov): Protection Against Regressions · Resistance to Refactoring (most critical) · Fast Feedback · Maintainability. A zero on any pillar kills the test's value.
+- **F.I.R.S.T.** + AAA structure; one logical assertion per test; name after behavior not method
+- **Testing styles ranked**: output-based (pure functions) > state-based > communication-based. A suite dominated by communication-based tests signals over-mocking.
+- **Mock only unmanaged external dependencies** (third-party APIs, SMTP, external buses). Never mock internal collaborators. Use real managed dependencies (your own DB) in integration tests. Never assert on stubs.
 - **Beyoncé Rule** (SE@Google): if you liked it, put a test on it
 - Mutation score on critical paths beats line coverage
-- Test pyramid (backend) or trophy (frontend-heavy)
+- Test pyramid (backend) or trophy (frontend-heavy); ice-cream cone is the anti-pattern
+- **Non-determinism** (Fowler): flaky tests are an active liability. Root causes: shared state, bare sleeps, remote services, direct clock calls, resource leaks. Quarantine with a hard limit.
+- **Suite-level strategy**: use `quality-test-strategy` for project-wide shape/coverage/infrastructure audits; use `quality-tests` for diff-level file review.
 
 ## Refactoring
 

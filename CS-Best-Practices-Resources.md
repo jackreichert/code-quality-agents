@@ -44,6 +44,7 @@ Foundation reading for clean-code skill synthesis.
 | 15 | **Growing Object-Oriented Software, Guided by Tests** | Freeman, Pryce | 2009 | Outside-in TDD, mock roles not objects |
 | 16 | **The Art of Unit Testing** (3rd ed.) | Roy Osherove | 2023 | Isolation, stubs, mocks, maintainable tests |
 | 17 | **xUnit Test Patterns** | Gerard Meszaros | 2007 | Test smell catalog, pattern library |
+| 27 | **Unit Testing: Principles, Practices, and Patterns** | Vladimir Khorikov | 2020 | Four Pillars, Classical vs. London school, integration testing, anti-patterns |
 
 ### Engineering Culture & Process
 
@@ -84,6 +85,11 @@ Foundation reading for clean-code skill synthesis.
 | **BranchByAbstraction** | Feature flag alternative for large refactors |
 | **Trunk Based Development** | Short-lived branches, continuous integration |
 | **Hexagonal Architecture (Ports and Adapters)** — Alistair Cockburn (alistair.cockburn.us) | Application as hexagon; ports defined by app, adapters connect external systems |
+| **Mocks Aren't Stubs** | Test double taxonomy (dummy/fake/stub/spy/mock); Classical vs. Mockist TDD; state vs. behavior verification |
+| **UnitTest** (bliki) | Definitional clarity; solitary vs. sociable distinction; compile suite vs. commit suite |
+| **Test Pyramid** (bliki) + **Practical Test Pyramid** (Ham Vocke) | Distribution strategy; unit/subcutaneous/E2E layers; ice-cream cone anti-pattern; CDC/Contract tests |
+| **Eradicating Non-Determinism in Tests** | Flaky test root causes (isolation, async, time, remote services, resource leaks); quarantine strategy |
+| **On the Diverse And Fantastical Shapes of Testing** | Pyramid vs. honeycomb vs. trophy; semantic root of the debate; test quality over proportions |
 
 ### Robert C. Martin — blog.cleancoder.com
 
@@ -144,7 +150,11 @@ Foundation reading for clean-code skill synthesis.
 | SOLID | Uncle Bob articles + Clean Architecture |
 | Design patterns | GoF, Head First Design Patterns |
 | Refactoring | Fowler Refactoring 2nd ed., Working Effectively with Legacy Code |
-| Testing / TDD | TDD by Example, GOOS, Art of Unit Testing |
+| Testing / TDD | TDD by Example, GOOS, Art of Unit Testing, xUnit Test Patterns, Khorikov |
+| Test doubles | Mocks Aren't Stubs (Fowler), Art of Unit Testing, xUnit Test Patterns ch.11 |
+| Test strategy / distribution | Test Pyramid (Fowler/Vocke), Diverse Fantastical Shapes (Fowler) |
+| Test quality / pillars | Khorikov Four Pillars, GOOS ch.18, Art of Unit Testing ch.7–9 |
+| Flaky tests | Eradicating Non-Determinism (Fowler) |
 | Architecture | Clean Architecture, PEAA, DDD |
 | Error handling | Clean Code ch.7, Release It! |
 | Performance | Code Complete, DDIA |
