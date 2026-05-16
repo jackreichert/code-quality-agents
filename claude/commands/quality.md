@@ -1,20 +1,22 @@
 ---
-description: "Code quality framework — runs targeted quality agents against your current git diff. Usage: /quality [aspects]"
-argument-hint: "[code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] — or omit for all"
+description: "Code quality framework — runs targeted quality agents against your current git diff or full project. Usage: /quality [aspects] | /quality project [path] [aspects]"
+argument-hint: "[project [path]] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] — or omit for all"
 allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 ---
 
 # Quality Framework
 
-Run quality agents against the current git diff. Spawn relevant agents in parallel, then aggregate findings into a prioritized action plan.
+Run quality agents against the current git diff or the full project. Spawn relevant agents in parallel, then aggregate findings into a prioritized action plan.
 
 **Requested aspects:** "$ARGUMENTS"
 
 ---
 
-## Step 1 — Get the Diff
+## Step 1 — Get the Diff (or Project Files)
 
-First, check we're in a git repo:
+**Check for project mode first.** If `project` appears anywhere in `$ARGUMENTS`, skip the diff and jump to **Case C** below.
+
+Otherwise, check we're in a git repo:
 ```bash
 git rev-parse --is-inside-work-tree 2>/dev/null
 ```
@@ -82,6 +84,34 @@ The combined file list (branch commits ∪ working tree) feeds Step 2's auto-sel
 
 **Edge case — feature-on-feature branches.** If `feature/x` was branched off `feature/y` (not `develop`), this probe will diff against `develop` and over-include `feature/y`'s commits. If the diff looks larger than expected, ask the user to confirm the base branch.
 
+### Case C — Project mode (`project` in $ARGUMENTS)
+
+Review all tracked source files in the repo, or a scoped subdirectory.
+
+**Extract path scope:** scan `$ARGUMENTS` tokens for any that start with `.`, `/`, or contain `/` — that token is the path scope. If none found, default to repo root (`.`).
+
+**Extract aspect keywords:** all remaining tokens (excluding `project` and the path) are the aspect filter for Step 2.
+
+```bash
+# List all git-tracked files under the scope
+git ls-files <path>
+```
+
+**Filter the file list** — exclude the following before passing to agents:
+
+| Exclude pattern | Reason |
+|----------------|--------|
+| `*.min.js`, `*.min.css` | Minified — unreadable |
+| `*.lock`, `package-lock.json`, `yarn.lock`, `Pipfile.lock`, `poetry.lock` | Generated — no signal |
+| `dist/`, `build/`, `out/`, `.next/`, `__pycache__/`, `.cache/` | Build output |
+| `node_modules/`, `vendor/`, `.venv/`, `venv/` | Dependencies — not your code |
+| `*.png`, `*.jpg`, `*.gif`, `*.webp`, `*.svg`, `*.ico`, `*.woff`, `*.woff2`, `*.ttf`, `*.pdf`, `*.zip` | Binary / assets |
+| `*.map` | Source maps |
+
+Warn the user if the filtered list exceeds 100 files, and offer to narrow by passing a subdirectory path.
+
+**In project mode:** agents receive the filtered file list (not a diff). Agents use their own Read/Grep/Glob tools to inspect the files. In Step 4, pass `"mode: project-wide review — read the listed files in full"` instead of diff content.
+
 ---
 
 ## Step 2 — Determine Applicable Agents
@@ -105,14 +135,15 @@ Parse `$ARGUMENTS` for aspect keywords:
 
 **Auto-selection rules (when no arguments provided)**
 
-These rules use signals detectable from `git diff --name-only` and the diff content itself, not from agent output.
+In **diff mode**, these rules use signals detectable from `git diff --name-only` and the diff content itself.
+In **project mode**, signals come from the filtered file list (extensions, directory names, file name patterns).
 
 | Detectable signal | Agent to run |
 |-------------------|-------------|
-| Any source files changed | quality-code-quality (always) |
-| New files added (`A` in `git status`) OR diff touches imports/dependencies OR new classes/modules | quality-architecture |
-| Test files in diff (`*.test.*`, `*.spec.*`, `*_test.*`, `test_*.py`) | quality-test-quality |
-| Files in auth/payment/api paths OR diff touches input handling, sessions, secrets | quality-security-review |
+| Any source files present | quality-code-quality (always) |
+| New files added (`A` in `git status`) OR diff touches imports/dependencies OR new classes/modules — *project mode: any source files* | quality-architecture |
+| Test files in diff (`*.test.*`, `*.spec.*`, `*_test.*`, `test_*.py`) — *project mode: same patterns in file list* | quality-test-quality |
+| Files in auth/payment/api paths OR diff touches input handling, sessions, secrets — *project mode: same path patterns in file list* | quality-security-review |
 | Migration files (`migrations/`, `db/migrate/`, `alembic/`, `prisma/migrations/`) OR Dockerfiles, k8s manifests, CI/CD configs (`.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`) OR feature-flag config OR `.env*` template changes | quality-delivery |
 | Service-to-service HTTP/gRPC calls (`axios`, `fetch`, `http.Client`, `requests`, `RestTemplate`, `grpc`) OR message-queue imports (`kafka`, `rabbitmq`, `sqs`, `pubsub`, `nats`, `eventbridge`) OR files under `services/` crossing service boundaries | quality-distributed |
 | ORM imports (`hibernate`, `sqlalchemy`, `prisma`, `typeorm`, `sequelize`, `mongoose`, `ActiveRecord`, `EntityFramework`) OR `*.sql`, `*.prisma`, schema files OR repository / DAO files OR raw SQL in diff | quality-persistence |
@@ -136,7 +167,9 @@ When in doubt: run `quality-code-quality` only.
 
 ## Step 3 — Display Plan
 
-Before spawning, show:
+Before spawning, show the appropriate header:
+
+**Diff mode:**
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  QUALITY ► REVIEWING
@@ -150,11 +183,26 @@ Changed files: [list from git diff --name-only]
   ...
 ```
 
+**Project mode:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ QUALITY ► PROJECT SCAN  [scope: <path>]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Files in scope: [N files across M directories]
+[list first 20 files, then "...and N more"]
+
+◆ Spawning agents in parallel...
+  → [agent name] — [what it checks]
+  → [agent name] — [what it checks]
+  ...
+```
+
 ---
 
 ## Step 4 — Spawn Agents in Parallel
 
-Pass the full diff content and file list to each agent. Example:
+**Diff mode** — pass the full diff content and file list:
 
 ```
 Task(
@@ -169,6 +217,26 @@ Task(
   Use the checklist in your instructions.",
   subagent_type="quality-code-quality",
   description="Code quality review"
+)
+```
+
+**Project mode** — pass the file list and instruct the agent to read the files itself:
+
+```
+Task(
+  prompt="Project-wide code quality review.
+  
+  Mode: project-wide review — read and analyze the listed files in full using your Read, Grep, and Glob tools.
+  
+  Scope: [path]
+  
+  Files to review:
+  [filtered file list, one per line]
+  
+  Focus on: naming, function design, code smells, complexity, comments.
+  Use the checklist in your instructions. Prioritize findings that appear in multiple files or indicate systemic issues.",
+  subagent_type="quality-code-quality",
+  description="Code quality project scan"
 )
 ```
 
@@ -235,6 +303,7 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 ## Usage Examples
 
 ```
+# — Diff mode (default) —
 /quality                              # Run all applicable agents on git diff (auto-routed)
 /quality code                         # Naming, functions, smells only
 /quality arch                         # SOLID, dependencies, coupling, resilience
@@ -252,12 +321,23 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 /quality code arch refactor           # Three-way review
 /quality persistence delivery         # DB layer + deploy/migration audit (common pair)
 /quality distributed arch             # Distributed concerns + structural review
+
+# — Project mode —
+/quality project                      # All applicable agents on all tracked source files
+/quality project src/                 # Narrow scan to a subdirectory
+/quality project code                 # Code quality only across full project
+/quality project arch                 # Architecture-only project scan
+/quality project security             # Security scan across full project
+/quality project src/ code arch       # Subdirectory + specific aspects
+/quality project code arch tests      # Full project, three aspects
 ```
 
 ---
 
 ## Tips
 
+- **Project mode vs. diff mode.** Use `/quality` (diff) as a fast pre-commit/pre-PR gate. Use `/quality project` for onboarding a new codebase, a periodic health check, or when the diff-based approach misses systemic issues across files that weren't recently changed.
+- **Narrow project scans.** On large repos, `/quality project src/services` is far more actionable than scanning everything. Start small and expand.
 - **Scope depends on the branch.** On `main`/`staging`/`develop`, `/quality` reviews staged (or working-tree) changes — a pre-commit gate. On a feature branch, it reviews the entire branch since it forked from `develop`/`staging`/`main` (whichever is its parent), plus uncommitted changes on top — a pre-PR gate.
 - **Run before committing on long-lived branches, before opening a PR on feature branches.** Critical issues block the commit/PR.
 - **`/quality`** — default; runs always-on agents based on what changed.
