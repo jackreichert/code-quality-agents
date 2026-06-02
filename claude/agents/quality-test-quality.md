@@ -41,6 +41,8 @@ The smells in sections below catch *symptoms*. This section catches *causes*. Su
 - **Self-validating**: Pass or fail, no manual inspection. Flag tests that write files for human comparison.
 - **Timely**: Tests written after implementation tend to test implementation, not behavior.
 
+**Three Laws of TDD** *(Martin)*: (1) no production code except to make a failing test pass; (2) only enough test to fail; (3) only enough production code to pass. Tests that violate these (production code with no driving test) read as post-hoc and tend to lock in implementation. Refactoring is separate — **Two Hats** *(Fowler)*: never refactor while red, never mix a refactor with a behavior change.
+
 ## Structure — AAA
 Every test: Arrange → Act → Assert. Single, clear Act step. If there are multiple Act steps, it's testing multiple behaviors — split it.
 
@@ -122,6 +124,8 @@ Coverage tells you which lines ran. Mutation testing tells you whether tests wou
 - Diff-scoped mutation runs in CI (full-codebase too slow)
 
 Tools: PIT/Pitest (Java), Stryker (JS/TS, .NET), Mutmut/Cosmic Ray (Python), mutant (Ruby), go-mutesting (Go).
+
+**Enforcement:** this is the why; `quality-gates` (`/quality gates`) is the enforceable how — it runs the tool diff-scoped and blocks below threshold (≥80% killed on changed critical-path, ≥90% for payment/auth/billing). Review the survivors here; block kill-rate regressions there.
 
 ## Property-Based Testing
 *Source: Pragmatic Programmer ch.7, QuickCheck lineage*

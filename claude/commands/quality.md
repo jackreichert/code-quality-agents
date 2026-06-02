@@ -1,6 +1,6 @@
 ---
 description: "Code quality framework — runs targeted quality agents against your current git diff or full project. Usage: /quality [aspects] | /quality project [path] [aspects]"
-argument-hint: "[project [path]] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] — or omit for all"
+argument-hint: "[project [path]] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] [gates] [spec] — or omit for all"
 allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 ---
 
@@ -129,6 +129,8 @@ Parse `$ARGUMENTS` for aspect keywords:
 - `distributed` or `dist` → quality-distributed
 - `patterns` or `pattern` → quality-patterns
 - `persistence` or `db` or `database` → quality-persistence
+- `gates` → quality-gates (runs tools — lint, complexity, duplication, coverage, mutation — for pass/fail vs thresholds)
+- `spec` or `specification` → quality-specification (acceptance-criteria / BDD feature-file quality)
 - No arguments / `all` → run all applicable agents (see rules below)
 
 **Note on simplify routing:** `quality-refactor` now handles both modes. Mode is selected by the aspect keyword: `simplify` → Mode 1 (light), `refactor` → Mode 2 (full plan). The existing `code-simplifier` agent is no longer routed by this orchestrator.
@@ -147,6 +149,7 @@ In **project mode**, signals come from the filtered file list (extensions, direc
 | Migration files (`migrations/`, `db/migrate/`, `alembic/`, `prisma/migrations/`) OR Dockerfiles, k8s manifests, CI/CD configs (`.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`) OR feature-flag config OR `.env*` template changes | quality-delivery |
 | Service-to-service HTTP/gRPC calls (`axios`, `fetch`, `http.Client`, `requests`, `RestTemplate`, `grpc`) OR message-queue imports (`kafka`, `rabbitmq`, `sqs`, `pubsub`, `nats`, `eventbridge`) OR files under `services/` crossing service boundaries | quality-distributed |
 | ORM imports (`hibernate`, `sqlalchemy`, `prisma`, `typeorm`, `sequelize`, `mongoose`, `ActiveRecord`, `EntityFramework`) OR `*.sql`, `*.prisma`, schema files OR repository / DAO files OR raw SQL in diff | quality-persistence |
+| Executable specs / acceptance criteria (`*.feature`, `features/`, `*.story`, Gherkin `Given`/`When`/`Then` in diff) OR a requirements/acceptance-criteria doc | quality-specification |
 | After other reviews complete (always last, on recently modified code) | quality-refactor in Mode 1 (Simplify) |
 
 **Opt-in only — never auto-spawned:**
@@ -154,6 +157,7 @@ In **project mode**, signals come from the filtered file list (extensions, direc
 - `quality-process` — invoke via `/quality process` when reviewing planning discipline of a significant change
 - `quality-patterns` — invoke via `/quality patterns` for pattern recognition / anti-pattern audit (auto-detection of "this should be a Strategy" is unreliable; prefer explicit invocation, often after `quality-code-quality` finds smells)
 - `quality-review` — invoke via `/quality review` for the full PR-style review with confidence scoring and lenses; redundant with the auto-selection above for normal pre-commit use
+- `quality-gates` — invoke via `/quality gates` to run the objective tool-measured floor (lint, complexity, duplication, coverage, mutation). Not auto-spawned because it executes tools that may not be installed; run it explicitly, in CI, or via the pre-commit hook (`hooks/`). It complements the reading agents — they judge, it measures.
 
 **Suggestion behavior:** When auto-spawning produces findings, suggest follow-up agents that aren't auto-spawned:
 - If `quality-code-quality` flags multiple smells (Switch on type code, Long Method with branches, etc.) → suggest `/quality patterns` for prescribed pattern recognition AND `/quality refactor` for Fowler moves
@@ -288,8 +292,12 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 
   Security findings get elevated weight: a CVSS-High vulnerability is treated as Critical for aggregation since security issues block ship more readily than other categories.
 
+- **Conflict precedence (tie-break)** — when two agents' recommendations pull in opposite directions (e.g. quality-code-quality wants a function split for readability while quality-architecture wants a deep module), resolve in this fixed order, *earlier wins*: **(1) correctness → (2) security & data safety → (3) readability for the next maintainer → (4) simplicity → (5) consistency with surrounding code → (6) performance.** This is Article I of [`CONSTITUTION.md`](../../CONSTITUTION.md); cite it when you override one finding in favor of another so the trade-off is explicit.
+
+- **If `quality-gates` ran:** a gate `FAIL` is a hard block regardless of the reading agents' severity counts — fold each failing gate in as a Critical finding. A gates verdict of `PARTIAL` (gates green but some skipped) is surfaced as a note, not a block.
+
 - Final verdict from normalized severity counts:
-  - Any Critical → `SIGNIFICANT ISSUES`
+  - Any Critical (including any gate `FAIL`) → `SIGNIFICANT ISSUES`
   - No Critical, ≥1 Important → `NEEDS WORK`
   - No Critical, no Important → `SHIP IT`
 
@@ -317,6 +325,8 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 /quality distributed                  # Service boundaries, idempotency, replication
 /quality patterns                     # GoF pattern recognition + anti-pattern audit
 /quality persistence                  # ORM patterns, N+1, transactions, migrations
+/quality gates                        # Objective tool-measured floor: lint, complexity, dup, coverage, mutation
+/quality spec                         # Acceptance-criteria / BDD feature-file quality
 /quality code arch                    # Code quality + architecture
 /quality code arch refactor           # Three-way review
 /quality persistence delivery         # DB layer + deploy/migration audit (common pair)
@@ -353,6 +363,8 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 - **`/quality distributed`** — when crossing service boundaries (HTTP, gRPC, queues) or touching replication, partitioning, distributed transactions. Reduces every distributed bug to one of Waldo's four categories.
 - **`/quality patterns`** — after `/quality code` finds smells. Names the GoF pattern that prescribes the fix, OR flags pattern misuse (Singleton-as-global, Visitor abuse). Often invoked alongside `refactor`.
 - **`/quality persistence`** — when ORM, repositories, queries, or migrations are in the diff. Catches N+1, deploy-coupled migrations, missing transaction boundaries, persistence leaking into domain.
+- **`/quality gates`** — the objective floor. Runs real tools (lint, cyclomatic complexity, duplication, coverage, mutation) and reports pass/fail against thresholds rather than opinions. Run it in CI or via the pre-commit hook (`hooks/`) to *block* breaches, not just flag them. The reading agents judge; gates measure. See [`CONSTITUTION.md`](../../CONSTITUTION.md) Article VII for the thresholds and `hooks/` for the git hook.
+- **`/quality spec`** — upstream of code. Reviews acceptance criteria and BDD/Gherkin feature files for the qualities that make a spec a reliable single source of truth: concrete key examples, declarative (not UI-scripted) phrasing, ubiquitous language, and executable/living specs. Run it before building a feature, or when `.feature` files are in the diff. Where `/quality tests` checks the tests verify the code, `/quality spec` checks the spec expresses the right behavior.
 
 ### Common multi-aspect combinations
 

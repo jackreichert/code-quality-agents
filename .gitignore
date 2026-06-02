@@ -1,0 +1,6 @@
+# Locally created by `install.sh --link` — Copilot (VS Code) instructions symlink.
+# It points at ../CONSTITUTION.md and is per-machine; don't commit it.
+instructions/
+
+# Installer backups
+*.bak.*

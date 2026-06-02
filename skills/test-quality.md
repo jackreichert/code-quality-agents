@@ -242,6 +242,8 @@ Tools: PIT/Pitest (Java), Stryker (JS/TS, .NET), Mutmut/Cosmic Ray (Python), mut
 
 > "100% coverage with 30% mutation kill rate is a suite full of `expect(true).toBe(true)` in disguise."
 
+**From guidance to gate.** This section explains *why* mutation testing matters; [`gates.md`](gates.md) makes it *enforceable* — a tool-run, diff-scoped gate with a pass/fail threshold (≥80% killed on changed critical-path code, ≥90% for payment/auth/billing). Use this skill to review the survivors; use `/quality gates` (or the pre-commit hook) to block a regression in kill rate. The two are the same idea at review-time and at enforcement-time.
+
 ## 6.6 Property-Based Testing
 
 *Source: The Pragmatic Programmer ch.7 (Hunt/Thomas), QuickCheck lineage*
@@ -261,7 +263,14 @@ When property-based tests find a bug, the failing input is usually one a develop
 
 ## 7. TDD Indicators
 
-*Source: TDD by Example (Beck), GOOS (Freeman/Pryce)*
+*Source: TDD by Example (Beck), GOOS (Freeman/Pryce), The Three Laws of TDD (Martin)*
+
+### The Three Laws of TDD (verbatim)
+1. You are not allowed to write any production code unless it is to make a failing unit test pass.
+2. You are not allowed to write more of a unit test than is sufficient to fail — and compilation failures are failures.
+3. You are not allowed to write more production code than is sufficient to pass the one failing test.
+
+The three laws force the Red → Green → Refactor micro-cycle. Refactoring sits *outside* the laws, governed by a separate discipline — the **Two Hats** rule (Fowler): never refactor while a test is red, and never mix a behavior change into a refactoring step. A suite that violates the laws (production code with no driving test, sprawling tests written long after) is the post-hoc pattern below.
 
 Signs that tests were written after the code (post-hoc tests tend to be weaker):
 

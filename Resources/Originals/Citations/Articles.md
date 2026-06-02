@@ -55,6 +55,12 @@ All entries © Joel Spolsky / Fog Creek / Stack Exchange.
 
 Joel's articles are a relevant exception worth noting: his older posts have been reprinted in book collections (*Joel on Software*, *More Joel on Software*, *Smart and Gets Things Done*) which are the canonical "buy if you want offline" form.
 
+## Software Metrics
+
+| Metric | Source |
+|--------|--------|
+| **CRAP** (Change Risk Anti-Patterns) — `comp(m)² × (1 − cov(m))³ + comp(m)`, where `comp` is cyclomatic complexity and `cov` is test coverage (0–1). Flags methods that are both complex and undertested. | Alberto Savoia & Bob Evans (2007), *crap4j* — <https://www.artima.com/weblogs/viewpost.jsp?thread=210575> |
+
 ## Google Engineering Practices — google.github.io/eng-practices
 
 CC BY 3.0 — see [`../README.md`](../README.md) for the per-page URL list.

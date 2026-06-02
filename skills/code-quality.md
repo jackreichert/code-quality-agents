@@ -219,6 +219,8 @@ They are **not competing alternatives** — they are complementary constraints. 
 - [ ] **Side effect isolation** — are side effects (I/O, network, DB, randomness, clock, mutation) pushed to the boundaries of the system?
   - The goal: a pure functional core surrounded by a thin imperative shell
   - Business logic should be testable without any I/O; the shell wires the pure core to the outside world
+  - This is the **Humble Object** pattern *(xUnit Test Patterns — Meszaros; Unit Testing P/P/P — Khorikov)*: keep the hard-to-test shell *humble* — almost no logic — and move all behavior into the testable core. Actively relocate logic *out* of the shell, don't merely draw a boundary around a fat one.
+  - Because the shell is logic-free, it can be excluded from coverage/mutation targets without lying about test strength. If the shell is too risky to skip, it isn't humble enough — that's the smell.
   - Flag: domain/business logic functions that directly call the database or external APIs
 
 - [ ] **Declarative over imperative** — does the code state WHAT should happen rather than HOW to do it step by step?

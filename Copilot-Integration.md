@@ -26,7 +26,7 @@ The Copilot side has **less workflow automation** but the **same review content*
 ```
 Code-Quality-Skills/
 ├── skills/                            # Canonical skills (source of truth)
-│   └── *.md                           # 11 skill files
+│   └── *.md                           # 13 skill files
 ├── README.md                          # Framework overview
 ├── copilot/
 │   ├── prompts/
@@ -105,7 +105,7 @@ A symlink works if the repo allows.
 
 **Claude Code:**
 ```bash
-ls ~/.claude/agents/quality-*.md         # 11 agents
+ls ~/.claude/agents/quality-*.md         # 13 agents
 ls ~/.claude/commands/quality.md         # orchestrator
 # In a repo: /quality
 ```

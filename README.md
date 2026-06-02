@@ -2,7 +2,7 @@
 
 ## What this is
 
-This repo is a **code-review framework** that runs inside [Claude Code](https://docs.claude.com/claude-code) (via the `/quality` slash command) and [GitHub Copilot](Copilot-Integration.md) (via per-skill prompts). It spawns specialized review agents — for code quality, architecture, refactoring, testing, security, delivery, distributed systems, design patterns, persistence, and process discipline — against your current `git diff` and aggregates their findings into a severity-ranked verdict (`SHIP IT` / `NEEDS WORK` / `SIGNIFICANT ISSUES`).
+This repo is a **code-review framework** that runs inside [Claude Code](https://docs.claude.com/claude-code) via the `/quality` slash command. It spawns specialized review agents — for code quality, architecture, refactoring, testing, security, delivery, distributed systems, design patterns, persistence, and process discipline — against your current `git diff` and aggregates their findings into a severity-ranked verdict (`SHIP IT` / `NEEDS WORK` / `SIGNIFICANT ISSUES`). Its write-time companion — the always-on [Constitution](CONSTITUTION.md) — also reaches GitHub Copilot and Codex via `install.sh --link` (see [Multi-tool reach](#multi-tool-reach)).
 
 Each agent is a focused lens. The orchestrator picks which lenses are relevant to the diff, runs them in parallel, deduplicates overlap, and returns one report.
 
@@ -13,7 +13,7 @@ The framework is a **distillation of the canonical CS literature** into agent-ex
 1. **Source selection.** A reading list of ~24 canonical books plus key articles and papers (Clean Code, Refactoring, A Philosophy of Software Design, Clean Architecture, GOOS, Designing Data-Intensive Applications, PEAA, Release It!, Continuous Delivery, GoF, the OWASP standards, etc.) — the full inventory lives in [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md).
 2. **Per-source summaries.** Each book/article was summarized into a structured note in [`Resources/`](Resources/) (Books, Articles, Papers, Standards, Originals). These summaries capture the principles, smell catalogs, patterns, and counterpoints from each source — not full reproductions, but enough to drive synthesis.
 3. **Cross-source synthesis into skills.** The summaries were synthesized into ~12 topical **skill documents** in [`skills/`](skills/) — the canonical, human-readable references. Each skill cites the specific chapters and articles that drove each section, and reconciles tensions between sources (e.g., Clean Code ch.4 vs. APOSD ch.12-15 on comments).
-4. **Agent compilation.** Each skill is compiled into a concise **agent prompt** at `~/.claude/agents/quality-*.md` (and a parallel Copilot prompt under [`copilot/prompts/`](copilot/prompts/)). The agents are the executable form; the skill files are the reasoning trail.
+4. **Agent compilation.** Each skill is compiled into a concise **agent prompt** at `~/.claude/agents/quality-*.md`. The agents are the executable form; the skill files are the reasoning trail.
 5. **Orchestration.** The `/quality` slash command routes a diff to the relevant agents, runs them in parallel, normalizes severity, and aggregates the report.
 
 The "Sources by Skill" section below shows exactly which book/article/chapter informed each part of each skill, so any finding the framework produces can be traced back to a primary source.
@@ -38,7 +38,7 @@ Then in any git repo, run `/quality` from Claude Code.
 
 `install.sh` deploys:
 
-- 11 agent files into `~/.claude/agents/quality-*.md`
+- 13 agent files into `~/.claude/agents/quality-*.md`
 - The `/quality` orchestrator into `~/.claude/commands/quality.md`
 
 Each agent is wired to read its canonical reference from wherever you cloned this repo (the absolute path is substituted in at install time, replacing the `__SKILLS_DIR__` placeholder in the bundled files under `claude/`). Re-running the installer is idempotent — files already up to date are skipped, no backups created.
@@ -48,15 +48,32 @@ Each agent is wired to read its canonical reference from wherever you cloned thi
 ```bash
 bash install.sh --dry-run             # show what would happen
 bash install.sh --force               # overwrite without backups
-bash install.sh --uninstall           # remove deployed files
+bash install.sh --link                # link CONSTITUTION.md into Claude/Codex/Copilot (one source, no copies)
+bash install.sh --name "Your Name"    # set the Constitution greeting name (with --link; asked if omitted)
+bash install.sh --copilot             # (re)generate the self-contained Copilot file [--copilot-prefix F] [--copilot-out F]
+bash install.sh --uninstall           # remove deployed files (incl. links)
 bash install.sh --skills-dir /path    # canonical docs live elsewhere
 bash install.sh --claude-home /path   # non-standard ~/.claude location
 bash install.sh --help
 ```
 
-### GitHub Copilot
+### One source, every tool — `--link`
 
-`install.sh` only installs the Claude Code side. The Copilot integration (`copilot/prompts/`, `copilot/global-instructions.md`, `copilot/AGENTS.md`) is configured manually — `install.sh` prints the exact steps at the end of a run, and the full guide lives in [`Copilot-Integration.md`](Copilot-Integration.md).
+`install.sh --link` wires the write-time [`CONSTITUTION.md`](CONSTITUTION.md) into all three assistants from a **single canonical file, with no content copies**:
+
+- **Claude Code** — appends a native `@import` line to `~/.claude/CLAUDE.md` (idempotent).
+- **Codex** — symlinks `~/.codex/AGENTS.md` → `CONSTITUTION.md` (an existing real file is backed up first).
+- **Copilot (VS Code)** — creates `instructions/CONSTITUTION.instructions.md` (a symlink) and prints the `chat.instructionsFilesLocations` settings snippet to register the folder.
+
+Edit the Constitution once; every tool sees the change. `--uninstall` removes the symlinks and the import line. The one context this can't reach is **github.com's web Copilot**, which only reads in-repo files — commit a copy there if you need it. See [`CONSTITUTION.md`](CONSTITUTION.md) for the rules and `hooks/` for the enforcement hook.
+
+**Personalizing the greeting.** The Constitution's communication-style article carries a `Hey {name}` / `Cheers {name}!` greeting. `--link` asks for the name (or pass `--name "Your Name"`) and writes it in. Re-running preserves the current choice.
+
+**Copilot can't `@import`** — so for Copilot the Constitution has to be *inlined*, not referenced. `--copilot` (re)generates a self-contained Copilot instructions file (your personal prefix via `--copilot-prefix`, then the Constitution inlined) at `instructions/copilot-instructions.md` (gitignored). Re-run it whenever `CONSTITUTION.md` changes to keep Copilot in sync; symlink your IntelliJ/global Copilot file and point VS Code's `github.copilot.chat.codeGeneration.instructions` at it so the refresh propagates. github.com web Copilot still needs a manual re-paste.
+
+### GitHub Copilot & Codex
+
+`install.sh` installs the Claude Code review agents. To also give Copilot and Codex the write-time Constitution, run `install.sh --link --copilot --copilot-prefix <your-prefix>` — it generates a self-contained instructions file (your personal prefix + the Constitution inlined) and points Codex's `~/.codex/AGENTS.md` at it. The installer prints the per-surface wiring (VS Code settings ref, IntelliJ symlink, github.com paste) at the end of a run. See [Multi-tool reach](#multi-tool-reach).
 
 ### Contributing
 
@@ -80,6 +97,8 @@ The framework keeps three synchronized copies of every agent (canonical → bund
 | `skills/distributed.md` | Waldo's four differences, replication/consistency, idempotency, partitioning, microservice boundaries, CQRS/ES tradeoffs | `~/.claude/agents/quality-distributed.md` |
 | `skills/patterns.md` | GoF + HFDP pattern recognition vocabulary, anti-patterns (Singleton/Visitor abuse), modern alternatives | `~/.claude/agents/quality-patterns.md` |
 | `skills/persistence.md` | PEAA pattern catalog: Active Record vs Data Mapper, Unit of Work, Repository, Lazy Load + N+1, transactions, migrations | `~/.claude/agents/quality-persistence.md` |
+| `skills/gates.md` | Objective tool-measured floor: lint, cyclomatic complexity, function length, duplication, coverage, mutation score, CRAP — runs tools and reports pass/fail vs explicit thresholds | `~/.claude/agents/quality-gates.md` |
+| `skills/specification.md` | Acceptance-criteria / BDD feature-file quality: key examples, declarative phrasing, ubiquitous language, executable & living specs, acceptance-level mutation | `~/.claude/agents/quality-specification.md` |
 
 ### Workflow & Supporting Docs
 
@@ -87,6 +106,18 @@ The framework keeps three synchronized copies of every agent (canonical → bund
 |------|-------|-----------|
 | `README.md` | Sources, lineage, exclusions, and update guide for this framework | — |
 | `skills/process.md` | Planning discipline: pre-flight (edge cases, deps, alternatives) + post-validation (Big-O, requirements, assumptions) | `~/.claude/agents/quality-process.md` |
+| `CONSTITUTION.md` | Write-time prevention layer — the skills distilled into always-on imperative rules, a conflict-precedence order, numeric gate thresholds, and a Definition of Done. Loaded via a `CLAUDE.md` `@`-import. | — |
+| `hooks/pre-commit` | Opt-in git hook that runs the fast gates (lint + complexity) on staged files and blocks the commit on a breach. See `hooks/README.md`. | — |
+
+### Two modes: review-time and write-time
+
+The framework now works at both ends of the change lifecycle:
+
+- **Review-time (catch).** `/quality` routes a diff to the relevant reading agents, which *judge* the code against the canon and report severity-ranked findings. This is the original framework.
+- **Write-time (prevent).** [`CONSTITUTION.md`](CONSTITUTION.md) compiles the same canon into terse always-on rules an agent obeys *while writing* — so issues are designed out, not just flagged. Import it into a project's `CLAUDE.md` with `@/path/to/Code-Quality-Skills/CONSTITUTION.md`.
+- **Enforcement (block).** `/quality gates` and the [`hooks/pre-commit`](hooks/) hook turn the qualitative rules into objective, tool-measured pass/fail gates (lint, complexity, duplication, coverage, mutation) — the floor beneath the reading agents. The agents opine; the gates measure.
+
+This mirrors the lesson of [unclebob/swarm-forge](https://github.com/unclebob/swarm-forge): the same distilled discipline should run as a *constitution* up front and as *enforced gates*, not only as post-hoc review.
 
 ### Lineage Notes
 
@@ -106,52 +137,24 @@ The framework keeps three synchronized copies of every agent (canonical → bund
 | Path | Purpose |
 |------|---------|
 | `~/.claude/commands/quality.md` | The `/quality [aspects]` command — routes to agents, aggregates findings (Claude Code) |
-| `copilot/prompts/quality-*.prompt.md` | Per-skill prompts for GitHub Copilot Chat (12 files) |
-| `copilot/global-instructions.md` | Condensed personal-instructions snippet for github.com + VS Code user settings |
-| `copilot/AGENTS.md` | Repo-level cross-tool template (Claude Code, Copilot, Cursor, Continue all read it) |
-| `Copilot-Integration.md` | How to set up the framework with both Claude Code and Copilot |
+| `instructions/` (generated, gitignored) | Self-contained inlined instructions (vendor prefix + Constitution) for tools that can't `@import` — Codex & Copilot, via `install.sh --copilot` |
+| `install.sh --link` / `--copilot` | Wires the Constitution into Claude (import), Codex (symlink), and Copilot (inlined file) from one source |
 
-### Tool integrations
+### Multi-tool reach
 
-The framework is designed to work in **both Claude Code and GitHub Copilot**:
+The **review framework** (`/quality` — parallel agents, diff-routing, severity aggregation, tool-backed SAST/SCA) is **Claude Code only**: it relies on slash-command orchestration and tool execution that Copilot and Codex don't offer.
 
-- **Claude Code**: full slash-command + parallel agent orchestration (auto-routes via `git diff` signals).
-- **GitHub Copilot**: per-skill custom prompts + global personal instructions + AGENTS.md. Same review content; different workflow.
+The **write-time [Constitution](CONSTITUTION.md)** reaches all three from a single source (`install.sh --link`):
 
-See [`Copilot-Integration.md`](Copilot-Integration.md) for the dual-tool setup.
+| Tool | How it gets the Constitution | `/quality` review agents? |
+|------|------------------------------|---------------------------|
+| **Claude Code** | native `@import` in `~/.claude/CLAUDE.md` — live | ✅ full |
+| **Codex** | `~/.codex/AGENTS.md` → self-contained inlined file (vendor HIPAA + Constitution) | ❌ |
+| **Copilot** (VS Code / IntelliJ / github.com) | self-contained inlined file via settings ref / symlink / paste | ❌ |
 
-#### Capability matrix
+Claude resolves `@import` live, so editing `CONSTITUTION.md` updates it instantly. Codex and Copilot can't reference an external file that way, so `install.sh --copilot` generates a **self-contained** file — a personal prefix (including company HIPAA) followed by the Constitution inlined — that both point at; re-run it after the Constitution changes. github.com web Copilot can't reach external files at all, so it takes a manual paste.
 
-| Feature | Claude Code | GitHub Copilot |
-|---------|-------------|----------------|
-| Slash command | `/quality` orchestrator | Per-skill prompts (`/quality-code`, `/quality-arch`, ...) |
-| Auto-routing by diff signal | ✅ orchestrator inspects `git diff` and selects relevant agents | ❌ user picks the prompt manually |
-| Parallel agent execution | ✅ multiple agents run simultaneously, results aggregated | ❌ one prompt at a time |
-| Severity aggregation across lenses | ✅ orchestrator deduplicates and normalizes | ❌ user reads each result separately |
-| Git-diff awareness | ✅ native — orchestrator passes the diff to each agent | ⚠ partial — works on open file/selection; diff must be pasted or accessed via Source Control view |
-| Tool augmentation (SAST/SCA/secrets) | ✅ agent can run `semgrep`, `bandit`, `npm audit`, `gitleaks` etc. | ❌ Copilot Chat can't execute tools — prompt suggests user run them |
-| Per-skill modes (e.g., simplify vs full refactor) | ✅ aspect keyword selects mode | ⚠ split into two distinct prompts (`/quality-simplify` vs `/quality-refactor`) |
-| Personal global instructions | ✅ `~/.claude/CLAUDE.md` | ✅ github.com personal instructions + VS Code user settings |
-| Repo-level instructions | ✅ `CLAUDE.md` in repo root | ✅ `.github/copilot-instructions.md` or `AGENTS.md` |
-| Custom agent definitions | ✅ `~/.claude/agents/quality-*.md` | ✅ `.prompt.md` files in user-shared location |
-| Suggestion follow-ups (e.g., "code-quality flagged smells → run /quality patterns") | ✅ orchestrator surfaces them automatically | ❌ user remembers to chain manually |
-| Confidence scoring + ≥80 threshold filter | ✅ built into agent prompts | ✅ same — built into prompt files |
-| Coverage of canonical sources (skills' content) | ✅ identical | ✅ identical |
-
-#### Copilot-side limitations to plan around
-
-These are inherent to Copilot's architecture, not gaps in this framework:
-
-1. **No parallel orchestration.** A complex change that Claude Code reviews via 5+ agents in one shot becomes 5+ sequential prompt invocations in Copilot. Reviewing schema changes that touch persistence + delivery + security needs three separate `/quality-*` runs.
-2. **No git-diff auto-context.** Copilot Chat reads the active file/selection, not the full diff. Workarounds: paste the diff into chat, use the VS Code Source Control view's Copilot integration, or open each changed file before invoking the prompt.
-3. **No tool execution in Copilot Chat.** The security prompt can't run `semgrep` or `npm audit` itself; it surfaces which tools would augment its findings and asks the user to run them. For full tool-backed security review, use Claude Code's `/quality security`.
-4. **No mode-of-modes routing.** Claude Code routes `simplify` and `refactor` to the same agent in different modes; in Copilot they're two prompt files. Pick the right one explicitly.
-5. **No automatic suggestion chaining.** When `quality-code-quality` flags many smells, the Claude Code orchestrator suggests `/quality patterns` and `/quality refactor` follow-ups; in Copilot you remember to chain.
-6. **AGENTS.md adoption is uneven across tools.** Claude Code reads `CLAUDE.md`; recent Copilot reads `.github/copilot-instructions.md`; Cursor reads `.cursorrules`. Drop `AGENTS.md` and symlink/duplicate to the per-tool filename if the tool doesn't read AGENTS.md directly.
-
-When the workflow shape matters (parallelism, diff-awareness, tool augmentation), prefer Claude Code. When you're already in VS Code or reviewing a github.com PR, the Copilot path is faster — same content, more manual.
-
-**⚠ Orchestrator may need updating** for the 4 new skills — the routing logic that auto-selects agents based on diff signals doesn't yet recognize `delivery`, `distributed`, `patterns`, or `persistence` as aspects. Until that's added, the new agents are reachable only via direct Task invocation or explicit aspect names (`/quality delivery`, `/quality persistence`, etc., assuming the orchestrator falls through to literal aspect names).
+> **Company HIPAA lives *inline* in each tool's instructions** (Claude's `CLAUDE.md`; the self-contained file for Codex/Copilot) — never delegated to the imported Constitution — so the mandate survives even where `@import` doesn't resolve.
 
 ---
 
@@ -431,6 +434,27 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
 - **IaC scanning**: checkov, tfsec, trivy config
 
 **Tool stance:** tools are recommended, not required. Their absence is *not blocking* — the review proceeds via manual code reading. But missing/failed tools must be called out explicitly so the coverage profile is visible to the reader.
+
+---
+
+### `skills/gates.md`
+
+**Pattern:** The objective, tool-measured floor beneath the reading agents — the enforceable form of judgments the other skills make qualitatively. Backed by:
+- **Continuous Delivery** (Humble & Farley) — automated quality gates in the deployment pipeline
+- **A Philosophy of Software Design** ch.19 (Ousterhout) — complexity as the thing to measure; **Clean Code** function-size/complexity heuristics
+- **Software Engineering at Google** chs.11, 20 — coverage and static analysis at scale
+- **GOOS** ch.19 — mutation testing as the test-quality oracle
+- **CRAP** metric — Savoia & Evans (2007), `crap4j` (see `Resources/Originals/Citations/Articles.md`); the one gate sourced outside the book canon, included because it measures the complex-*and*-undertested interaction nothing else in the set catches
+- Enforceable-gate framing adapted from the constitution/engineering model in [unclebob/swarm-forge](https://github.com/unclebob/swarm-forge)
+
+### `skills/specification.md`
+
+**Source:** Synthesized fresh — no prior agent ancestor. The layer upstream of `test-quality.md`: spec quality before code.
+- **Specification by Example** (Adzic, 2011) — the seven process patterns, key-example discipline, living documentation (`Resources/Books/Testing/28-Specification-by-Example.md`)
+- **BDD / Given-When-Then** (Dan North) + **The Cucumber Book** (Wynne & Hellesøy) — Gherkin structure
+- **The Clean Coder** ch.8 + **Continuous Delivery** ch.8 — acceptance tests as executable specifications
+- **Domain-Driven Design** (Evans) — ubiquitous language
+- Acceptance-level (Gherkin) mutation adapted from `gherkin-mutator` in [unclebob/swarm-forge](https://github.com/unclebob/swarm-forge)
 
 ---
 

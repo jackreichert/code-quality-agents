@@ -15,6 +15,8 @@ Full reference: __SKILLS_DIR__/skills/refactor.md
 
 **Prime directive:** Preserve functionality exactly. Every step must keep tests green. If tests don't cover the area being changed, prescribe seam-finding and characterization tests first before deeper refactoring.
 
+**Two Hats** *(Fowler)*: refactoring and adding behavior are separate hats — one at a time. Never change behavior mid-refactor; never refactor while a test is red. Flag any change that mixes a structural refactor with a behavior change — they belong in separate commits.
+
 ---
 
 ## Mode Selection

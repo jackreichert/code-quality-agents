@@ -71,7 +71,7 @@ Flag: redundant WHAT comments, commented-out code, outdated journal entries, noi
 
 - **Immutability** — are variables reassigned when they don't need to be? Could objects be transformed into new values rather than mutated in place? Mutable state is the root of all concurrency bugs.
 - **Pure functions** — does the function depend only on its arguments (no hidden inputs)? Does it produce only its return value (no hidden side effects)? Pure functions need no mocks to test.
-- **Side effect isolation** — are I/O, DB writes, network calls, and mutation pushed to the boundaries of the system? Can the business logic core be tested without touching any I/O?
+- **Side effect isolation** — are I/O, DB writes, network calls, and mutation pushed to the boundaries of the system? Can the business logic core be tested without touching any I/O? This is the **Humble Object** pattern: keep the untestable shell humble (logic-free) and relocate behavior into the testable core; a humble shell is trivial enough to exclude from coverage. If it isn't, it's not humble enough.
 - **Declarative over imperative** — is a `for` loop used where `map`/`filter`/`reduce` would state intent more clearly? Declarative code says WHAT; imperative says HOW.
 - **Shared mutable state** — are mutable objects passed between functions or threads? Could state be made local or passed as parameters instead?
 - **Early returns** — does deeply nested logic flatten to early returns? Guard clauses at the top, happy path at the bottom.

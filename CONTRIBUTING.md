@@ -64,7 +64,7 @@ If you edit only one of the three layers and skip the sync step, the others dive
 Every PR runs `.github/workflows/ci.yml`:
 
 - **shellcheck** on `install.sh` and `bundle.sh`
-- **install smoke test** — runs `install.sh --dry-run` then a real install into a temp `--claude-home`, asserts the 11 agents and the orchestrator land and that `__SKILLS_DIR__` got substituted
+- **install smoke test** — runs `install.sh --dry-run` then a real install into a temp `--claude-home`, asserts the 13 agents and the orchestrator land and that `__SKILLS_DIR__` got substituted
 
 Keep both scripts shellcheck-clean. If you add a new shell script, add it to the workflow.
 
