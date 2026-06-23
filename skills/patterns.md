@@ -192,6 +192,53 @@ The patterns listed below are *the most commonly abused* in practice. Flag with 
 
 ---
 
+## 3.5 General Software Anti-Patterns (beyond pattern misuse)
+*Source: Brown, Malveau, McCormick & Mowbray, **AntiPatterns** (1998); Beck/Fowler code smells; c2 wiki.*
+
+§ 3 covers *misapplied GoF patterns*. This section covers the broader catalogue of recurring bad solutions — the ones that have a name precisely so a reviewer can point at them. An anti-pattern is a *commonly-reached-for* solution that looks reasonable and reliably makes things worse; naming it is half the fix. This agent **owns** the structural/cross-cutting ones that lack a dedicated home; for the rest, name it and route to the owning agent (see § 3.6).
+
+### Structural / architectural
+| Anti-pattern | Tell | Why it hurts |
+|--------------|------|--------------|
+| **God Object / The Blob** | one class/module knows or does everything; thousands of lines; dozens of fields | no cohesion, untestable, every change touches it |
+| **Spaghetti Code** | control flow you can't trace; deep nesting; flow via shared mutable flags | change is guesswork; no module boundaries |
+| **Big Ball of Mud** | no discernible architecture; everything reaches into everything | structure can't be reasoned about |
+| **Golden Hammer** | one tool/pattern/lib forced onto every problem ("we use X for everything") | misfit solutions, accidental complexity |
+| **Lava Flow** | dead/uncertain code kept "just in case"; commented-out blocks; `_old`/`_v2` forks | dead weight nobody dares delete |
+| **Poltergeist** | a class whose only job is to call another and vanish; stateless pass-through | needless indirection; delete and inline |
+| **Yo-Yo Problem** | following one behavior forces hopping up/down a deep inheritance chain | unreadable; favor composition |
+| **Boat Anchor** | retained code/dependency/infra that serves no current purpose | maintenance + cognitive cost for zero value |
+| **Reinventing the Wheel** | hand-rolled date math, crypto, JSON parser, retry loop | bugs the stdlib/library already solved |
+| **Sequential Coupling** | methods that must be called in a hidden, specific order (`init()` then `run()`) | misuse compiles but breaks at runtime |
+
+### Code-level
+| Anti-pattern | Tell | Owning agent |
+|--------------|------|--------------|
+| **Magic Numbers / Strings** | unexplained literals (`* 86400`, `if status == 7`) | `quality-code-quality` |
+| **Hard Coding** | env-specific paths, URLs, creds baked into source | `quality-delivery` / `quality-security-review` |
+| **Copy-Paste Programming** | near-identical blocks that will drift | `quality-code-quality` (Duplicated Code) |
+| **Dead Code** | unreachable branches, unused functions/params | `quality-code-quality` |
+| **Cargo Cult** | code/config copied without understanding ("everyone adds this annotation") | `quality-patterns` |
+| **Premature Optimization** | micro-tuning with no measured baseline | `quality-code-quality` |
+| **Accidental Complexity** | complexity from the solution, not the problem | `quality-architecture` |
+
+### How to report one
+Name the anti-pattern explicitly — the name *is* the diagnosis. Then give the smallest corrective move, not a rewrite (Constitution Article I: scalpel, not sledgehammer). "This is a God Object — extract the billing responsibility into its own collaborator" beats "this class is too big."
+
+## 3.6 Anti-Pattern Ownership Map (route, don't duplicate)
+Anti-patterns are the negative space of every review axis. When the diff shows one, name it, then check whether a dedicated agent owns the deep analysis — flag-and-route rather than re-running their checks here.
+
+| Anti-pattern family | Owning agent | This agent's role |
+|---------------------|--------------|-------------------|
+| Misapplied GoF pattern, Cargo Cult, Poltergeist, Golden Hammer, Lava Flow, Yo-Yo | **quality-patterns** (here) | own it — full analysis |
+| God Object, Spaghetti, Big Ball of Mud, Accidental Complexity, cyclic deps, layer violations | **quality-architecture** | name it, route |
+| Code smells: Magic Numbers, Dead Code, Copy-Paste, Long Method, Primitive Obsession | **quality-code-quality** | name it, route |
+| Stability antipatterns (cascading failure, no timeouts, integration-point fragility) | **quality-distributed** | name it, route |
+| N+1, leaky ORM mapping, missing transaction boundary | **quality-persistence** | name it, route |
+| Hard-coded config/secrets, breaking schema change | **quality-delivery** / **quality-security-review** | name it, route |
+
+---
+
 ## 4. Modern Alternatives
 
 Several GoF patterns became language features. Don't add a pattern that the language already handles.

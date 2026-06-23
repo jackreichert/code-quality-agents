@@ -2,7 +2,10 @@
 
 ## What this is
 
-This repo is a **code-review framework** that runs inside [Claude Code](https://docs.claude.com/claude-code) via the `/quality` slash command. It spawns specialized review agents — for code quality, architecture, refactoring, testing, security, delivery, distributed systems, design patterns, persistence, and process discipline — against your current `git diff` and aggregates their findings into a severity-ranked verdict (`SHIP IT` / `NEEDS WORK` / `SIGNIFICANT ISSUES`). Its write-time companion — the always-on [Constitution](CONSTITUTION.md) — also reaches GitHub Copilot and Codex via `install.sh --link` (see [Multi-tool reach](#multi-tool-reach)).
+This repo is a **code-quality framework** — the canonical CS literature distilled into agent-executable form — delivered through two layers:
+
+- **Review-time (catch).** A set of specialized review agents — for code quality, architecture, refactoring, testing, security, delivery, distributed systems, design patterns, persistence, and process discipline — run against your current `git diff` and aggregate their findings into a severity-ranked verdict (`SHIP IT` / `NEEDS WORK` / `SIGNIFICANT ISSUES`). This layer runs inside [Claude Code](https://docs.claude.com/claude-code) via the `/quality` slash command, because it relies on parallel agent orchestration and tool execution that other assistants don't yet offer.
+- **Write-time (prevent).** The always-on [Constitution](CONSTITUTION.md) compiles the same canon into terse imperative rules an agent obeys *while writing*. It's plain markdown, so it's portable: Claude Code, GitHub Copilot, and Codex are wired natively by `install.sh --link`, and any other agentic tool (Cursor, Continue, Windsurf, Cline, Aider, Zed, …) adopts it through that tool's project-instructions file (see [Multi-tool reach](#multi-tool-reach)).
 
 Each agent is a focused lens. The orchestrator picks which lenses are relevant to the diff, runs them in parallel, deduplicates overlap, and returns one report.
 
@@ -147,13 +150,27 @@ The **review framework** (`/quality` — parallel agents, diff-routing, severity
 
 The **write-time [Constitution](CONSTITUTION.md)** reaches all three from a single source (`install.sh --link`):
 
-| Tool | How it gets the Constitution | `/quality` review agents? |
-|------|------------------------------|---------------------------|
-| **Claude Code** | native `@import` in `~/.claude/CLAUDE.md` — live | ✅ full |
-| **Codex** | `~/.codex/AGENTS.md` → self-contained inlined file (vendor HIPAA + Constitution) | ❌ |
-| **Copilot** (VS Code / IntelliJ / github.com) | self-contained inlined file via settings ref / symlink / paste | ❌ |
+| Tool | How it gets the Constitution | Wired by installer? | `/quality` review agents? |
+|------|------------------------------|---------------------|---------------------------|
+| **Claude Code** | native `@import` in `~/.claude/CLAUDE.md` — live | ✅ `--link` | ✅ full |
+| **Codex** | `~/.codex/AGENTS.md` → self-contained inlined file (vendor HIPAA + Constitution) | ✅ `--link --copilot` | ❌ |
+| **Copilot** (VS Code / IntelliJ / github.com) | self-contained inlined file via settings ref / symlink / paste | ✅ `--copilot` | ❌ |
+| **Any other agentic tool** — Cursor, Continue, Windsurf, Cline, Aider, Zed, Gemini CLI, … | point the tool's project-instructions file at `CONSTITUTION.md` | ➖ manual (one line) | ❌ |
 
 Claude resolves `@import` live, so editing `CONSTITUTION.md` updates it instantly. Codex and Copilot can't reference an external file that way, so `install.sh --copilot` generates a **self-contained** file — a personal prefix (including company HIPAA) followed by the Constitution inlined — that both point at; re-run it after the Constitution changes. github.com web Copilot can't reach external files at all, so it takes a manual paste.
+
+**Beyond the three the installer wires.** The Constitution is just a markdown document, so *any* assistant that reads a project-level instructions file can adopt it — the installer simply doesn't automate the wiring yet. The lingua franca is the [**`AGENTS.md`**](https://agents.md) open standard: drop a repo-root `AGENTS.md` (or symlink it to `CONSTITUTION.md`) and Codex, Cursor, Zed, Gemini CLI, Jules, and a growing list of agents pick it up. Tools that use a native file instead read the same content from their own path:
+
+| Tool | Where to put it |
+|------|-----------------|
+| **Cursor** | `.cursor/rules/*.mdc`, or a repo-root `AGENTS.md` |
+| **Continue** | a rule in `.continue/rules/` (or `rules:` in `config.yaml`) |
+| **Windsurf** | `.windsurf/rules/`, or `AGENTS.md` |
+| **Cline** | `.clinerules/` |
+| **Aider** | a conventions file referenced from `.aider.conf.yml`, or `AGENTS.md` |
+| **Zed / Gemini CLI** | `.rules` / `GEMINI.md`, both of which also honor `AGENTS.md` |
+
+Two caveats. (1) Like Copilot, tools that can't reference an *external* file want the **inlined** copy — generate it once with `install.sh --copilot` and point them at `instructions/copilot-instructions.md` (re-run on change). (2) Check the tool's current docs for the exact filename — these conventions move fast. Either way the principle holds: **one canonical `CONSTITUTION.md`, every tool pointed at it.**
 
 > **Company HIPAA lives *inline* in each tool's instructions** (Claude's `CLAUDE.md`; the self-contained file for Codex/Copilot) — never delegated to the imported Constitution — so the mandate survives even where `@import` doesn't resolve.
 

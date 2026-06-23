@@ -1,6 +1,6 @@
 ---
 name: quality-patterns
-description: Invoke after code-quality identifies smells with structural fixes, when a refactor would benefit from a named pattern, when a pattern is being misapplied (Singleton overuse, Visitor for type dispatch), or when reviewing a junior engineer's pattern adoption. Pattern recognition + anti-pattern detection.
+description: Invoke after code-quality identifies smells with structural fixes, when a refactor would benefit from a named pattern, when a pattern is being misapplied (Singleton overuse, Visitor for type dispatch), when a recognized anti-pattern appears (God Object, Golden Hammer, Lava Flow, Cargo Cult), or when reviewing a junior engineer's pattern adoption. Pattern recognition + anti-pattern detection — the explicit home for naming anti-patterns and routing domain-specific ones to the owning axis agent.
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
@@ -120,6 +120,34 @@ Flag: Page Controllers in a Front Controller framework (one route handler import
 - AbstractFactoryFactoryBuilder. Reified abstraction so many times the original purpose is unrecoverable
 - **Flag**: any class name that's two pattern names compounded
 
+## General Anti-Patterns (beyond pattern misuse)
+*Full catalogue + provenance: skills/patterns.md § 3.5. Source: Brown et al., AntiPatterns (1998).*
+
+The section above is *misapplied GoF patterns*. These are the broader recurring bad solutions — name the anti-pattern explicitly (the name **is** the diagnosis), then give the smallest corrective move, not a rewrite (Article I: scalpel, not sledgehammer).
+
+**This agent owns (full analysis):**
+- **God Object / Blob** — one class knows/does everything → extract responsibilities
+- **Golden Hammer** — one tool/pattern forced onto every problem → match tool to problem
+- **Lava Flow** — dead/uncertain code kept "just in case", commented-out blocks, `_old`/`_v2` forks → delete
+- **Poltergeist** — stateless pass-through class that calls another and vanishes → inline and delete
+- **Yo-Yo Problem** — behavior forces hopping up/down a deep inheritance chain → favor composition
+- **Cargo Cult** — code/config/annotation copied without understanding → remove or justify
+- **Reinventing the Wheel** — hand-rolled date math, crypto, retry loop → use the library
+- **Sequential Coupling** — methods that must be called in a hidden order → make ordering explicit or enforced
+
+## Anti-Pattern Ownership Map (name it, then route — don't duplicate the axis agent)
+
+| Anti-pattern family | Owner | Here |
+|---------------------|-------|------|
+| Misapplied GoF, Cargo Cult, Poltergeist, Golden Hammer, Lava Flow, Yo-Yo | **quality-patterns** (this agent) | own it |
+| Spaghetti, Big Ball of Mud, Accidental Complexity, cyclic deps, layer violations | **quality-architecture** | name + route |
+| Magic Numbers, Dead Code, Copy-Paste, Long Method, Primitive Obsession | **quality-code-quality** | name + route |
+| Stability antipatterns (cascading failure, no timeout) | **quality-distributed** | name + route |
+| N+1, leaky ORM mapping, missing transaction boundary | **quality-persistence** | name + route |
+| Hard-coded config/secrets, breaking schema change | **quality-delivery** / **quality-security-review** | name + route |
+
+> God Object straddles patterns and architecture — name it here when it surfaces in a pattern review, but defer the deep cohesion/coupling analysis to quality-architecture.
+
 ## Modern Alternatives (use the language feature, not the 1995 pattern)
 
 | Pattern | Modern alternative |
@@ -159,7 +187,7 @@ The bar: **the pattern must clarify intent, not obscure it.** If reviewers need 
 - [MINOR] [PATTERN] description — file:line — note
 
 ### Anti-Pattern Concerns
-- [ANTI-PATTERN] file:line — what's wrong — modern alternative
+- [ANTI-PATTERN] <named anti-pattern> — file:line — what's wrong — smallest corrective move — (owner: this agent | route to quality-<axis>)
 
 ### Strengths
 - [pattern application done well]
