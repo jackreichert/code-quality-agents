@@ -52,6 +52,7 @@ When two rules pull in opposite directions, resolve in this fixed order — **ea
 
 - **SOLID by default.** One reason to change per module. Depend on abstractions, inject dependencies, keep interfaces small and focused.
 - **Dependencies point inward.** Domain logic does not import frameworks, I/O, or persistence. Keep the dependency arrows aimed at stable abstractions.
+- **No dependency cycles; depend toward stability.** The module/package dependency graph stays acyclic (ADP) — break any cycle with an interface or a shared third component. A module depends only on ones more stable than itself (SDP), never the reverse.
 - **Favor composition + DI over inheritance.**
 - **Deep modules, narrow interfaces** (APOSD): hide complexity behind a small surface. Information hiding beats exposing internals for convenience.
 - **Across a process boundary, think distributed** (Waldo): assume latency, partial failure, concurrency, and no shared memory. Make remote operations idempotent; never silently swallow a remote failure.

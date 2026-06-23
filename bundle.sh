@@ -84,7 +84,7 @@ bundle_file() {
   fi
 }
 
-note "AGENTS" "tokenizing 13 agents"
+note "AGENTS" "tokenizing 14 agents"
 count=0
 shopt -s nullglob
 for src in "$AGENTS_LIVE"/quality-*.md; do

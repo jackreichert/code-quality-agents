@@ -38,7 +38,7 @@ Then in any git repo, run `/quality` from Claude Code.
 
 `install.sh` deploys:
 
-- 13 agent files into `~/.claude/agents/quality-*.md`
+- 14 agent files into `~/.claude/agents/quality-*.md`
 - The `/quality` orchestrator into `~/.claude/commands/quality.md`
 
 Each agent is wired to read its canonical reference from wherever you cloned this repo (the absolute path is substituted in at install time, replacing the `__SKILLS_DIR__` placeholder in the bundled files under `claude/`). Re-running the installer is idempotent — files already up to date are skipped, no backups created.
@@ -99,6 +99,7 @@ The framework keeps three synchronized copies of every agent (canonical → bund
 | `skills/persistence.md` | PEAA pattern catalog: Active Record vs Data Mapper, Unit of Work, Repository, Lazy Load + N+1, transactions, migrations | `~/.claude/agents/quality-persistence.md` |
 | `skills/gates.md` | Objective tool-measured floor: lint, cyclomatic complexity, function length, duplication, coverage, mutation score, CRAP — runs tools and reports pass/fail vs explicit thresholds | `~/.claude/agents/quality-gates.md` |
 | `skills/specification.md` | Acceptance-criteria / BDD feature-file quality: key examples, declarative phrasing, ubiquitous language, executable & living specs, acceptance-level mutation | `~/.claude/agents/quality-specification.md` |
+| _cross-cutting: `security-review` + `distributed` + `persistence` + `code-quality`_ | Flow tracing — control + data flow from entry points to sinks: taint (source→sink), error propagation, resource/transaction lifecycle, N+1-across-chain, cross-boundary partial failure. Runs as Phase 2 of `/quality deep`; standalone via `/quality flow` | `~/.claude/agents/quality-flow.md` |
 
 ### Workflow & Supporting Docs
 

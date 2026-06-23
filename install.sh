@@ -3,7 +3,7 @@
 # Code Quality Skills installer
 #
 # Deploys the /quality framework into Claude Code:
-#   - 13 agent files into ~/.claude/agents/quality-*.md
+#   - 14 agent files into ~/.claude/agents/quality-*.md
 #   - 1 orchestrator command into ~/.claude/commands/quality.md
 #
 # Each agent file references the canonical skill markdown in this repo;
@@ -313,7 +313,7 @@ ensure_import_line() {
   fi
 }
 
-note "AGENTS" "deploying 13 agents → $AGENTS_DEST"
+note "AGENTS" "deploying 14 agents → $AGENTS_DEST"
 count=0
 for src in "$AGENTS_SRC"/quality-*.md; do
   [[ -e "$src" ]] || die "no agent files found in $AGENTS_SRC"

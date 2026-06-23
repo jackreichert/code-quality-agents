@@ -1,6 +1,6 @@
 ---
-description: "Code quality framework — runs targeted quality agents against your current git diff or full project. Usage: /quality [aspects] | /quality project [path] [aspects]"
-argument-hint: "[project [path]] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] [gates] [spec] — or omit for all"
+description: "Code quality framework — runs targeted quality agents against your current git diff or full project. Usage: /quality [aspects] | /quality project [path] [aspects] | /quality deep [path] (file→method→flow pass)"
+argument-hint: "[project [path]] [deep] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] [gates] [spec] — or omit for all"
 allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 ---
 
@@ -15,6 +15,8 @@ Run quality agents against the current git diff or the full project. Spawn relev
 ## Step 1 — Get the Diff (or Project Files)
 
 **Check for project mode first.** If `project` appears anywhere in `$ARGUMENTS`, skip the diff and jump to **Case C** below.
+
+**Check for deep mode too.** If `deep` (or its alias `trace`) appears anywhere in `$ARGUMENTS`, resolve the scope using Cases A–C exactly as below (diff / feature-branch / project), then follow the **Deep Mode** section instead of Steps 2–5. `deep` and `project` combine — `/quality deep project src/` does a deep traversal scoped to a subtree. `deep`/`trace` are mode keywords, not aspects, so Step 2 ignores them.
 
 Otherwise, check we're in a git repo:
 ```bash
@@ -131,6 +133,7 @@ Parse `$ARGUMENTS` for aspect keywords:
 - `persistence` or `db` or `database` → quality-persistence
 - `gates` → quality-gates (runs tools — lint, complexity, duplication, coverage, mutation — for pass/fail vs thresholds)
 - `spec` or `specification` → quality-specification (acceptance-criteria / BDD feature-file quality)
+- `flow` or `flows` → quality-flow (trace control + data flow from entry points to sinks; taint, error propagation, resource/transaction lifecycle, N+1-across-chain)
 - No arguments / `all` → run all applicable agents (see rules below)
 
 **Note on simplify routing:** `quality-refactor` now handles both modes. Mode is selected by the aspect keyword: `simplify` → Mode 1 (light), `refactor` → Mode 2 (full plan). The existing `code-simplifier` agent is no longer routed by this orchestrator.
@@ -157,6 +160,7 @@ In **project mode**, signals come from the filtered file list (extensions, direc
 - `quality-process` — invoke via `/quality process` when reviewing planning discipline of a significant change
 - `quality-patterns` — invoke via `/quality patterns` for pattern recognition / anti-pattern audit (auto-detection of "this should be a Strategy" is unreliable; prefer explicit invocation, often after `quality-code-quality` finds smells)
 - `quality-review` — invoke via `/quality review` for the full PR-style review with confidence scoring and lenses; redundant with the auto-selection above for normal pre-commit use
+- `quality-flow` — invoke via `/quality flow` to trace execution flows on demand, or it runs automatically as Phase 2 of `/quality deep`. Not auto-spawned in normal diff review because whole-flow tracing is heavier than per-file review; reach for it when a bug spans methods/files, or on input→sink paths in security-sensitive code.
 - `quality-gates` — invoke via `/quality gates` to run the objective tool-measured floor (lint, complexity, duplication, coverage, mutation). Not auto-spawned because it executes tools that may not be installed; run it explicitly, in CI, or via the pre-commit hook (`hooks/`). It complements the reading agents — they judge, it measures.
 
 **Suggestion behavior:** When auto-spawning produces findings, suggest follow-up agents that aren't auto-spawned:
@@ -308,6 +312,110 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 
 ---
 
+## Deep Mode (`/quality deep` | alias `/quality trace`)
+
+A deep, sequential traversal for when parallel-aspect review isn't enough — onboarding a subsystem, auditing a critical path, or scrutinizing a large feature before merge. Default `/quality` runs one agent per *aspect* across the whole scope; **deep mode walks the code by *unit*** — file → method — then follows the **flows** that connect them, then synthesizes a single top-level summary.
+
+Deep mode reuses **Step 1**'s scope resolution (diff / feature-branch / project). It then replaces **Steps 2–5** with the three sequential phases below.
+
+**Guardrails — resolve before Phase 1:**
+- Deep mode is expensive (it spawns per-file agents). If the in-scope file list exceeds **40 files**, warn and require a narrower scope (a path, or `deep project <path>`) or explicit confirmation to proceed.
+- Apply the same **Case C exclusion table** (minified, generated, build output, dependencies, binaries) to the file list regardless of diff/project mode.
+
+### Phase 1 — File by file, method by method
+
+Batch the in-scope files (≤ ~6 small files per batch; 1 agent per large or complex file). For each batch, spawn `quality-code-quality` with a method-level instruction:
+
+```
+Task(
+  prompt="Deep-mode per-file review. For EACH file below, walk it method by method, top to bottom.
+  For every method report:
+    • purpose (one line) and its parameter/return contract
+    • findings keyed to `method:line` — naming, single-responsibility, complexity,
+      error handling, FP/purity, performance, and security surface
+      (unvalidated input, injection sinks, secret handling)
+    • the inputs it consumes and the outputs/side-effects it produces
+      (DB writes, network calls, mutations) — these seed flow tracing
+  Use the checklist in your instructions. Report nothing for trivial getters/setters.
+
+  Files:
+  [batch file list]",
+  subagent_type="quality-code-quality",
+  description="Deep: per-file methods"
+)
+```
+
+For files matching **sensitive signals** (auth/payment/api paths, input handling, secrets) also spawn `quality-security-review` on that file. For files with **ORM/SQL signals** also spawn `quality-persistence`. Batches and these add-on agents run in parallel.
+
+Collect each agent's per-method findings **and** its per-method input/output notes — the I/O notes feed Phase 2.
+
+### Phase 2 — Trace the flows
+
+After **all** Phase 1 agents complete, spawn the dedicated flow tracer, `quality-flow`. It traces sources → sinks and owns the flow-level checks (taint, error propagation, resource/transaction lifecycle, cross-boundary partial failure, N+1-across-chain). Pass it the Phase 1 per-method input/output notes — they seed the trace:
+
+```
+Task(
+  prompt="Deep-mode flow analysis. Trace control + data flow from each entry point to its sinks,
+  one entry point at a time, using the per-method input/output notes below plus your own
+  Read/Grep/Glob. Produce a flow map per entry point and the flow-level findings in your checklist.
+  Per-method I/O notes from Phase 1:
+  [notes]
+
+  Entry-point hints:
+  [grep results for routes/handlers/main/consumers]",
+  subagent_type="quality-flow",
+  description="Deep: flow analysis"
+)
+```
+
+`quality-flow` is the right agent here — `quality-architecture` reviews *structure* (SOLID, layering, coupling), not execution flow. If the flow map exposes structural rot on a path (a dependency cycle, a layer violation, a god module), note it and suggest a follow-up `/quality arch` rather than asking `quality-flow` to judge structure.
+
+### Phase 3 — Top-level summary
+
+The orchestrator synthesizes this itself — **do not delegate it**:
+
+- **Flow map** — entry points → key paths → sinks (from Phase 2).
+- **Findings by severity** — Critical / Important / Minor, deduplicated, using **Step 5**'s aggregation, severity-normalization, and conflict-precedence rules. Tag each finding `file:method:line`.
+- **Cross-cutting flow findings** — the Phase 2 issues that span files.
+- **Verdict** — same thresholds as Step 5 (any Critical → `SIGNIFICANT ISSUES`; ≥1 Important → `NEEDS WORK`; else → `SHIP IT`).
+
+**Detail destination — ask the user.** Before printing, ask where the granular per-file/per-method detail should land (skip the prompt if the user passed `--report`, `--inline`, or `--summary`):
+
+| Choice | Behavior |
+|--------|----------|
+| **Report file** (default) | Write full per-file/per-method/flow detail to `~/Documents/AryaObsidian/Planning/{repo}/quality-deep-{timestamp}.md`; show only the flow map + top-level summary in chat. |
+| **Inline** | Print full detail, then the summary, in chat. |
+| **Summary only** | Discard granular detail; show the summary alone. |
+
+Output header:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ QUALITY ► DEEP  [scope: <path or diff>]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+## Flow Map
+  ▸ <entry point> → … → <sink>
+  ...
+
+## Critical — Fix Before Committing
+- [agent] file:method:line — description
+## Important — Fix Before PR
+- ...
+## Minor — Worth Doing
+- ...
+
+## Cross-Cutting (flow-level)
+- ...
+
+─────────────────────────────────────────────────
+Files traced: N | Flows: M | Issues: [X critical, Y important, Z minor]
+Detail: [report path | inline | summary-only]
+Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
+```
+
+---
+
 ## Usage Examples
 
 ```
@@ -327,6 +435,7 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 /quality persistence                  # ORM patterns, N+1, transactions, migrations
 /quality gates                        # Objective tool-measured floor: lint, complexity, dup, coverage, mutation
 /quality spec                         # Acceptance-criteria / BDD feature-file quality
+/quality flow                         # Trace control + data flow from entry points to sinks
 /quality code arch                    # Code quality + architecture
 /quality code arch refactor           # Three-way review
 /quality persistence delivery         # DB layer + deploy/migration audit (common pair)
@@ -340,6 +449,14 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 /quality project security             # Security scan across full project
 /quality project src/ code arch       # Subdirectory + specific aspects
 /quality project code arch tests      # Full project, three aspects
+
+# — Deep mode (file → method → flow → summary) —
+/quality deep                         # Deep traversal of the diff / branch changes
+/quality deep src/services            # Deep traversal scoped to a path (still git-diff scope unless 'project')
+/quality deep project src/services    # Deep traversal of all tracked files under a subtree
+/quality deep --report                # Skip the prompt: write detail to a report file
+/quality deep --inline                # Skip the prompt: print full detail in chat
+/quality deep --summary               # Skip the prompt: summary only
 ```
 
 ---
@@ -364,6 +481,8 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 - **`/quality patterns`** — after `/quality code` finds smells. Names the GoF pattern that prescribes the fix, OR flags pattern misuse (Singleton-as-global, Visitor abuse). Often invoked alongside `refactor`.
 - **`/quality persistence`** — when ORM, repositories, queries, or migrations are in the diff. Catches N+1, deploy-coupled migrations, missing transaction boundaries, persistence leaking into domain.
 - **`/quality gates`** — the objective floor. Runs real tools (lint, cyclomatic complexity, duplication, coverage, mutation) and reports pass/fail against thresholds rather than opinions. Run it in CI or via the pre-commit hook (`hooks/`) to *block* breaches, not just flag them. The reading agents judge; gates measure. See [`CONSTITUTION.md`](../../CONSTITUTION.md) Article VII for the thresholds and `hooks/` for the git hook.
+- **`/quality flow`** — trace execution, not structure. Follows control + data flow from each entry point (route, handler, `main`, consumer) to its sinks, catching bugs that live in the path between methods: untrusted input reaching a sink, errors swallowed mid-flow, leaked resources/locks, a transaction that doesn't wrap the unit of work, N+1 visible only across the call chain, partial failure across a boundary. Runs automatically as Phase 2 of `/quality deep`; invoke alone when chasing a cross-method/cross-file bug. Complements `/quality arch` (structure) — not a substitute for it.
+- **`/quality deep`** — the deep traversal. Where default `/quality` runs one agent per aspect in parallel, deep mode walks file → method, then traces flows from entry point to sink, then synthesizes one summary. Use it to onboard a subsystem, audit a critical path, or scrutinize a large feature before merge. Expensive — scope it to a path (`/quality deep src/services` or `/quality deep project src/`). Defaults to writing detail to a report file and showing only the summary; override with `--inline` / `--summary`.
 - **`/quality spec`** — upstream of code. Reviews acceptance criteria and BDD/Gherkin feature files for the qualities that make a spec a reliable single source of truth: concrete key examples, declarative (not UI-scripted) phrasing, ubiquitous language, and executable/living specs. Run it before building a feature, or when `.feature` files are in the diff. Where `/quality tests` checks the tests verify the code, `/quality spec` checks the spec expresses the right behavior.
 
 ### Common multi-aspect combinations
