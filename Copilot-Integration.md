@@ -72,7 +72,7 @@ Make the 12 prompt files available globally in VS Code:
 {
   "chat.promptFiles": true,
   "chat.promptFilesLocations": {
-    "~/Documents/AryaObsidian/Code-Quality-Skills/copilot/prompts": true
+    "<path-to-this-repo>/copilot/prompts": true
   }
 }
 ```
@@ -112,7 +112,7 @@ ls ~/.claude/commands/quality.md         # orchestrator
 
 **Copilot (VS Code):**
 ```bash
-ls ~/Documents/AryaObsidian/Code-Quality-Skills/copilot/prompts/  # 12 .prompt.md files
+ls <path-to-this-repo>/copilot/prompts/  # 12 .prompt.md files
 # In VS Code Chat: type "/" — should see /quality-code, /quality-arch, etc.
 ```
 

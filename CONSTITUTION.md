@@ -129,6 +129,6 @@ A task is complete only when **all** of the following hold. This is the checklis
 *Personalized by `install.sh --link --name "Your Name"` (it asks if you omit `--name`). The haiku/limerick sign-off is **off by default** — turn it on with `--poem` (and off again with `--no-poem`). An un-personalized clone shows the `__USER_NAME__` placeholder.*
 
 <!-- BEGIN quality:communication-style -->
-- Start every answer with "Hey Jack" and end with "Cheers Jack!"
+- Start every answer with "Hey __USER_NAME__" and end with "Cheers __USER_NAME__!"
 <!-- END quality:communication-style -->
 

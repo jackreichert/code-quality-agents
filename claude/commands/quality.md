@@ -383,7 +383,7 @@ The orchestrator synthesizes this itself — **do not delegate it**:
 
 | Choice | Behavior |
 |--------|----------|
-| **Report file** (default) | Write full per-file/per-method/flow detail to `~/Documents/AryaObsidian/Planning/{repo}/quality-deep-{timestamp}.md`; show only the flow map + top-level summary in chat. |
+| **Report file** (default) | Write full per-file/per-method/flow detail to `quality-deep-{timestamp}.md` in the repo root; show only the flow map + top-level summary in chat. |
 | **Inline** | Print full detail, then the summary, in chat. |
 | **Summary only** | Discard granular detail; show the summary alone. |
 

@@ -30,8 +30,8 @@ For the master inventory of every book and article that informed this work, see 
 Install into [Claude Code](https://docs.claude.com/claude-code):
 
 ```bash
-git clone https://github.com/jackreichert/quality-agents.git
-cd quality-agents
+git clone https://github.com/jackreichert/code-quality-agents.git
+cd code-quality-agents
 bash install.sh
 ```
 
@@ -129,7 +129,7 @@ This mirrors the lesson of [unclebob/swarm-forge](https://github.com/unclebob/sw
 |--------------|---------|
 | `skills/review.md` | Started from the `code-reviewer` agent and absorbed the old `review-pr` orchestrator workflow |
 | `skills/refactor.md` | Synthesized from Fowler/Feathers and absorbed the old `code-simplifier` behavior-preserving cleanup mode |
-| `skills/process.md` | Built from Jack's CLAUDE.md "Planning Process" section, grounded in Code Complete + Pragmatic Programmer + Clean Coder + MMM + APOSD |
+| `skills/process.md` | Built from the maintainer's CLAUDE.md "Planning Process" section, grounded in Code Complete + Pragmatic Programmer + Clean Coder + MMM + APOSD |
 | `skills/delivery.md` | Synthesized fresh from Continuous Delivery + Trunk-Based Development + 12-Factor + Feature Toggles (Hodgson) — no prior agent ancestor |
 | `skills/distributed.md` | Synthesized fresh from DDIA + Waldo's "A Note on Distributed Computing" + Microservices/CQRS/Event Sourcing — no prior agent ancestor |
 | `skills/patterns.md` | Synthesized fresh from GoF + Head First Design Patterns + Effective Java refinements + APOSD ch.19 counterweight — no prior agent ancestor |
@@ -412,7 +412,7 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
 - **Painless Software Schedules** — Joel Spolsky → Pre-Flight check 5 (estimation discipline; weak signal in this skill but cited)
 - **Out of the Tar Pit** — Moseley & Marks (2006) → Principles (essential vs. accidental complexity)
 
-**Lineage:** Built from Jack's CLAUDE.md "Planning Process" section. The 9 checks (5 pre-flight + 4 post-validation) map directly to that source.
+**Lineage:** Built from the maintainer's CLAUDE.md "Planning Process" section. The 9 checks (5 pre-flight + 4 post-validation) map directly to that source.
 
 ---
 
@@ -661,4 +661,4 @@ For now, run `/quality` manually at the points above. If you find yourself doing
 
 ---
 
-*Maintainer: Jack. Created 2026-05-01. Update whenever the framework grows.*
+*Created 2026-05-01. Update whenever the framework grows.*

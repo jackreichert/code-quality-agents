@@ -2,7 +2,7 @@
 
 **Purpose:** Audit the *discipline* applied to a code change — pre-flight thinking (edge cases, dependencies, alternatives) and post-validation (requirements, principles, Big-O, assumptions). Not a code-quality check; a planning-and-validation check.
 
-**Sources:** Code Complete 2nd ed. (McConnell), The Pragmatic Programmer (Hunt/Thomas), The Clean Coder (Martin), The Mythical Man-Month (Brooks), Painless Software Schedules (Spolsky), Out of the Tar Pit (Moseley/Marks), Jack's CLAUDE.md "Planning Process" section
+**Sources:** Code Complete 2nd ed. (McConnell), The Pragmatic Programmer (Hunt/Thomas), The Clean Coder (Martin), The Mythical Man-Month (Brooks), Painless Software Schedules (Spolsky), Out of the Tar Pit (Moseley/Marks), the maintainer's CLAUDE.md "Planning Process" section
 
 **When to invoke:**
 - Before starting a significant change (pre-flight)
