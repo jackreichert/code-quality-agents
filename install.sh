@@ -3,7 +3,7 @@
 # Code Quality Skills installer
 #
 # Deploys the /quality framework into Claude Code:
-#   - 14 agent files into ~/.claude/agents/quality-*.md
+#   - 15 agent files into ~/.claude/agents/quality-*.md
 #   - 1 orchestrator command into ~/.claude/commands/quality.md
 #
 # Each agent file references the canonical skill markdown in this repo;
@@ -19,12 +19,17 @@
 # Constitution inlined, since Copilot can't resolve @import). Re-run it
 # whenever CONSTITUTION.md changes to keep Copilot in sync.
 #
+# Personalization never touches the git-tracked CONSTITUTION.md (it keeps the
+# __USER_NAME__ placeholder). --name writes a personalized copy to the gitignored
+# instructions/CONSTITUTION.local.md and points Claude/Codex/Copilot at THAT — so the
+# repo stays shareable while every deployed artifact greets you by name.
+#
 # Usage:
 #   bash install.sh                       # install with defaults
 #   bash install.sh --dry-run             # show what would happen
 #   bash install.sh --force               # overwrite without backups
-#   bash install.sh --link                # also link CONSTITUTION.md into Claude/Codex/Copilot
-#   bash install.sh --name "Your Name"    # greeting name for the Constitution (asked if omitted, with --link)
+#   bash install.sh --link                # also link the Constitution into Claude/Codex/Copilot
+#   bash install.sh --name "Your Name"    # greeting name baked into the DEPLOYED copy only (asked if omitted, with --link)
 #   bash install.sh --poem                # enable the haiku/limerick sign-off (off by default; --no-poem to disable)
 #   bash install.sh --copilot             # (re)generate self-contained Copilot file [--copilot-prefix F] [--copilot-out F]
 #   bash install.sh --skills-dir /path    # canonical docs live elsewhere
@@ -107,13 +112,14 @@ if [[ "$UNINSTALL" -eq 1 ]]; then
     log "removed $COMMANDS_DEST/quality.md"
   fi
 
-  # Tear down anything --link created (only our own symlinks / import line).
+  # Tear down anything --link / --copilot created (only our own symlinks / import line / generated copy).
   const="$SKILLS_DIR/CONSTITUTION.md"
+  const_personal="$SKILLS_DIR/instructions/CONSTITUTION.local.md"
   selfcontained="${COPILOT_OUT:-$SKILLS_DIR/instructions/copilot-instructions.md}"
   codex_link="$HOME/.codex/AGENTS.md"
   if [[ -L "$codex_link" ]]; then
     codex_tgt="$(readlink "$codex_link")"
-    if [[ "$codex_tgt" == "$const" || "$codex_tgt" == "$selfcontained" ]]; then
+    if [[ "$codex_tgt" == "$const" || "$codex_tgt" == "$const_personal" || "$codex_tgt" == "$selfcontained" ]]; then
       run rm -f "$codex_link"
       log "removed $codex_link"
     fi
@@ -123,14 +129,19 @@ if [[ "$UNINSTALL" -eq 1 ]]; then
     run rm -f "$inst_link"
     log "removed $inst_link"
   fi
+  if [[ -f "$const_personal" ]]; then
+    run rm -f "$const_personal"
+    log "removed $const_personal (personalized deployed copy)"
+  fi
   claude_md="$CLAUDE_HOME/CLAUDE.md"
-  if [[ -f "$claude_md" ]] && grep -qF "@$const" "$claude_md"; then
+  if [[ -f "$claude_md" ]] && grep -qE '^@.*CONSTITUTION(\.local)?\.md$' "$claude_md"; then
     if [[ "$DRY_RUN" -eq 1 ]]; then
-      log "dry-run: would remove import line from $claude_md"
+      log "dry-run: would remove Constitution import line(s) from $claude_md"
     else
       tmp="$(mktemp)"
-      grep -vF "@$const" "$claude_md" > "$tmp" && mv "$tmp" "$claude_md"
-      log "removed import line from $claude_md"
+      grep -Ev '^@.*CONSTITUTION(\.local)?\.md$' "$claude_md" > "$tmp" || true
+      mv "$tmp" "$claude_md"
+      log "removed Constitution import line(s) from $claude_md"
     fi
   fi
 
@@ -208,16 +219,18 @@ link_symlink() {
   fi
 }
 
-# Read the greeting name currently baked into CONSTITUTION.md ("" if unset/placeholder).
+# Read the greeting name baked into a Constitution file ("" if unset/placeholder/missing).
 current_comms_name() {
+  [[ -f "$1" ]] || { printf ''; return; }
   local n
   n="$(sed -n 's/.*Start every answer with "Hey \(.*\)" and end.*/\1/p' "$1" | head -1)"
   [[ "$n" == "__USER_NAME__" ]] && n=""
   printf '%s' "$n"
 }
 
-# Is the haiku/limerick sign-off currently enabled in CONSTITUTION.md? (1/0)
+# Is the haiku/limerick sign-off currently enabled in a Constitution file? (1/0)
 current_comms_poem() {
+  [[ -f "$1" ]] || { printf '0'; return; }
   if sed -n '/BEGIN quality:communication-style/,/END quality:communication-style/p' "$1" | grep -q 'haiku or limerick'; then
     printf '1'
   else
@@ -225,11 +238,15 @@ current_comms_poem() {
   fi
 }
 
-# Rewrite the communication-style block: greeting name always, haiku/limerick only if poem=1.
+# Write a personalized copy of the Constitution from SRC to DEST: greeting name always,
+# haiku/limerick only if poem=1. SRC (the canonical, git-tracked CONSTITUTION.md) is NEVER
+# modified — the repo keeps __USER_NAME__, the deployed copy carries the name. DEST lives
+# under instructions/ which is gitignored.
 personalize_constitution() {
-  local file="$1" name="$2" poem="$3"
-  if ! grep -q "BEGIN quality:communication-style" "$file"; then
-    log "communication-style: markers not found in $(basename "$file") — skipping"
+  local src="$1" dest="$2" name="$3" poem="$4"
+  if ! grep -q "BEGIN quality:communication-style" "$src"; then
+    log "communication-style: markers not found in $(basename "$src") — copying verbatim"
+    run cp "$src" "$dest"
     return 0
   fi
   local pstate="off"; [[ "$poem" == "1" ]] && pstate="on"
@@ -248,17 +265,17 @@ personalize_constitution() {
     /<!-- END quality:communication-style -->/ { skip=0; print; next }
     skip { next }
     { print }
-  ' "$file" > "$tmp"
-  if cmp -s "$tmp" "$file"; then
+  ' "$src" > "$tmp"
+  if [[ -f "$dest" ]] && cmp -s "$tmp" "$dest"; then
     rm -f "$tmp"
-    log "unchanged communication style (Hey $name, poem $pstate)"
+    log "unchanged $(basename "$dest") (Hey $name, poem $pstate)"
   elif [[ "$DRY_RUN" -eq 1 ]]; then
     rm -f "$tmp"
-    log "dry-run: would set greeting 'Hey $name', poem $pstate in $(basename "$file")"
+    log "dry-run: would write $(basename "$dest") (Hey $name, poem $pstate)"
   else
-    backup_if_needed "$file"
-    mv "$tmp" "$file"
-    log "set greeting → 'Hey $name', poem $pstate in $(basename "$file")"
+    mkdir -p "$(dirname "$dest")"
+    mv "$tmp" "$dest"
+    log "personalized → $(basename "$dest") (Hey $name, poem $pstate)"
   fi
 }
 
@@ -278,7 +295,7 @@ generate_copilot() {
     printf 'resolve @import): Constitution inlined below. Company HIPAA/safety rules inline and\n'
     printf 'first. Do not hand-edit — re-run: bash install.sh --copilot --copilot-prefix <file>. -->\n\n'
     if [[ "$have_prefix" -eq 1 ]]; then
-      awk 'BEGIN{c=0} /<!--/{c=1} c{if(/-->/)c=0; next} {print}' "$prefix" | grep -v '^@.*CONSTITUTION\.md$' || true
+      awk 'BEGIN{c=0} /<!--/{c=1} c{if(/-->/)c=0; next} {print}' "$prefix" | grep -Ev '^@.*CONSTITUTION(\.local)?\.md$' || true
       printf '\n---\n\n'
     fi
     cat "$const"
@@ -296,24 +313,30 @@ generate_copilot() {
   fi
 }
 
-# Append an @import line to a CLAUDE.md if it isn't already there.
-ensure_import_line() {
-  local file="$1" line="$2"
-  if [[ -f "$file" ]] && grep -qF "$line" "$file"; then
+# Point a CLAUDE.md at exactly one Constitution @import: strip any prior canonical or
+# personalized (CONSTITUTION.local.md) import, then append the chosen one. Keeps Claude
+# from loading the Constitution twice when the deploy target changes.
+set_constitution_import() {
+  local file="$1" want="@$2"
+  local re='^@.*CONSTITUTION(\.local)?\.md$'
+  if [[ -f "$file" ]] && grep -qxF "$want" "$file" && [[ "$(grep -Ec "$re" "$file")" -eq 1 ]]; then
     log "unchanged $file (import present)"
     return 0
   fi
   backup_if_needed "$file"
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    log "dry-run: would append '$line' to $file"
-  else
-    mkdir -p "$(dirname "$file")"
-    printf '\n%s\n' "$line" >> "$file"
-    log "appended import → $file"
+    log "dry-run: would set Constitution import in $file → $want"
+    return 0
   fi
+  mkdir -p "$(dirname "$file")"
+  local tmp; tmp="$(mktemp)"
+  [[ -f "$file" ]] && grep -Ev "$re" "$file" > "$tmp" || true
+  printf '\n%s\n' "$want" >> "$tmp"
+  mv "$tmp" "$file"
+  log "set Constitution import → $file ($want)"
 }
 
-note "AGENTS" "deploying 14 agents → $AGENTS_DEST"
+note "AGENTS" "deploying 15 agents → $AGENTS_DEST"
 count=0
 for src in "$AGENTS_SRC"/quality-*.md; do
   [[ -e "$src" ]] || die "no agent files found in $AGENTS_SRC"
@@ -325,59 +348,71 @@ log "$count agent file(s) processed"
 note "ORCHESTRATOR" "deploying /quality command"
 install_file "$COMMANDS_SRC/quality.md" "$COMMANDS_DEST/quality.md"
 
-# Generate the self-contained inlined file BEFORE --link, so Codex/Copilot can point at it.
-if [[ "$COPILOT" -eq 1 ]]; then
-  cp_const="$SKILLS_DIR/CONSTITUTION.md"
-  [[ -f "$cp_const" ]] || die "no CONSTITUTION.md at $cp_const — cannot generate Copilot file"
-  cp_out="${COPILOT_OUT:-$SKILLS_DIR/instructions/copilot-instructions.md}"
-  note "COPILOT" "generating self-contained instructions (vendor prefix + Constitution inlined) — used by Codex & Copilot"
-  run mkdir -p "$(dirname "$cp_out")"
-  generate_copilot "$cp_out" "$COPILOT_PREFIX" "$cp_const"
-  log "point at it — Codex: ~/.codex/AGENTS.md symlink (via --link); IntelliJ: symlink global file; VS Code: settings file ref; github.com: paste"
-fi
-
-if [[ "$LINK" -eq 1 ]]; then
-  const="$SKILLS_DIR/CONSTITUTION.md"
-  [[ -f "$const" ]] || die "no CONSTITUTION.md at $const — cannot link"
-  note "LINK" "wiring CONSTITUTION.md into Claude / Codex / Copilot (single source, no copies)"
-
-  # Communication style — set the greeting name (Article IX).
+# Resolve the greeting name + poem ONCE (needed by both --copilot and --link), and — when a
+# name is set — write a personalized copy of the Constitution to instructions/CONSTITUTION.local.md
+# (gitignored). The canonical, git-tracked CONSTITUTION.md is NEVER modified: the repo keeps the
+# __USER_NAME__ placeholder while every deployed artifact carries the name. EFFECTIVE_CONST is the
+# file all three tools point at — the personalized copy if it exists, else canonical.
+CONST_CANONICAL="$SKILLS_DIR/CONSTITUTION.md"
+CONST_PERSONAL="$SKILLS_DIR/instructions/CONSTITUTION.local.md"
+EFFECTIVE_CONST="$CONST_CANONICAL"
+if [[ "$LINK" -eq 1 || "$COPILOT" -eq 1 ]]; then
+  [[ -f "$CONST_CANONICAL" ]] || die "no CONSTITUTION.md at $CONST_CANONICAL"
   name="$USER_NAME"
   if [[ -z "$name" ]]; then
-    cur="$(current_comms_name "$const")"
-    if [[ -n "$cur" ]]; then
-      name="$cur"                                   # already personalized — keep it (idempotent)
-    elif [[ "$DRY_RUN" -eq 0 && -t 0 ]]; then
+    name="$(current_comms_name "$CONST_PERSONAL")"          # reuse a previously-installed name (idempotent)
+    if [[ -z "$name" && "$LINK" -eq 1 && "$DRY_RUN" -eq 0 && -t 0 ]]; then
       printf '  Name for the Constitution greeting (Hey NAME / Cheers NAME!): '
       read -r name
     fi
   fi
   poem="$POEM"
-  [[ -z "$poem" ]] && poem="$(current_comms_poem "$const")"   # no flag → preserve current choice
-  if [[ -z "$name" ]]; then
-    log "communication-style: no name set (left as __USER_NAME__) — re-run with --name \"Your Name\""
+  [[ -z "$poem" ]] && poem="$(current_comms_poem "$CONST_PERSONAL")"   # no flag → preserve current choice
+  if [[ -n "$name" ]]; then
+    note "PERSONALIZE" "writing deployed Constitution copy (canonical keeps __USER_NAME__)"
+    run mkdir -p "$SKILLS_DIR/instructions"
+    personalize_constitution "$CONST_CANONICAL" "$CONST_PERSONAL" "$name" "$poem"
+    [[ "$DRY_RUN" -eq 1 ]] || EFFECTIVE_CONST="$CONST_PERSONAL"
   else
-    personalize_constitution "$const" "$name" "$poem"
+    log "communication-style: no name set — deploying canonical (Hey __USER_NAME__); re-run with --name \"Your Name\""
   fi
+fi
 
-  # Claude Code — native @import
-  ensure_import_line "$CLAUDE_HOME/CLAUDE.md" "@$const"
+# Generate the self-contained inlined file BEFORE --link, so Codex/Copilot can point at it.
+if [[ "$COPILOT" -eq 1 ]]; then
+  cp_out="${COPILOT_OUT:-$SKILLS_DIR/instructions/copilot-instructions.md}"
+  note "COPILOT" "generating self-contained instructions (vendor prefix + Constitution inlined) — used by Codex & Copilot"
+  run mkdir -p "$(dirname "$cp_out")"
+  generate_copilot "$cp_out" "$COPILOT_PREFIX" "$EFFECTIVE_CONST"
+  log "point at it — Codex: ~/.codex/AGENTS.md symlink (via --link); IntelliJ: symlink global file; VS Code: settings file ref; github.com: paste"
+fi
+
+if [[ "$LINK" -eq 1 ]]; then
+  note "LINK" "wiring the Constitution into Claude / Codex / Copilot (deployed copy carries the name)"
+
+  # Claude Code — native @import, pointed at the effective (personalized or canonical) copy.
+  set_constitution_import "$CLAUDE_HOME/CLAUDE.md" "$EFFECTIVE_CONST"
 
   # Codex — point its global agents file at the self-contained inlined file (vendor HIPAA +
-  # Constitution) when present, so HIPAA lives in AGENTS.md, not the Constitution. Else bare
-  # Constitution. ~/.codex lives elsewhere → absolute target.
+  # Constitution) when present, so HIPAA lives in AGENTS.md, not the Constitution. Else the
+  # effective Constitution. ~/.codex lives elsewhere → absolute target.
   run mkdir -p "$HOME/.codex"
   codex_sc="${COPILOT_OUT:-$SKILLS_DIR/instructions/copilot-instructions.md}"
   if [[ -f "$codex_sc" ]]; then
     link_symlink "$codex_sc" "$HOME/.codex/AGENTS.md"
   else
-    link_symlink "$const" "$HOME/.codex/AGENTS.md"
+    link_symlink "$EFFECTIVE_CONST" "$HOME/.codex/AGENTS.md"
     log "note: Codex AGENTS.md → Constitution only (no vendor HIPAA). Run --copilot --copilot-prefix <file> to generate the self-contained file, then re-link."
   fi
 
-  # Copilot (VS Code) — a *.instructions.md symlink in a dedicated folder (relative target, repo-portable)
+  # Copilot (VS Code) — a *.instructions.md symlink in a dedicated folder (relative target, repo-portable),
+  # pointed at the effective copy (CONSTITUTION.local.md when personalized, else ../CONSTITUTION.md).
   run mkdir -p "$SKILLS_DIR/instructions"
-  link_symlink "../CONSTITUTION.md" "$SKILLS_DIR/instructions/CONSTITUTION.instructions.md"
+  if [[ "$EFFECTIVE_CONST" == "$CONST_PERSONAL" ]]; then
+    link_symlink "CONSTITUTION.local.md" "$SKILLS_DIR/instructions/CONSTITUTION.instructions.md"
+  else
+    link_symlink "../CONSTITUTION.md" "$SKILLS_DIR/instructions/CONSTITUTION.instructions.md"
+  fi
 
   log "Copilot (VS Code): add to settings.json —"
   log "    \"chat.instructionsFilesLocations\": { \"$SKILLS_DIR/instructions\": true }"

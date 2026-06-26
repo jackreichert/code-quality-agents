@@ -15,7 +15,7 @@ The framework is a **distillation of the canonical CS literature** into agent-ex
 
 1. **Source selection.** A reading list of ~24 canonical books plus key articles and papers (Clean Code, Refactoring, A Philosophy of Software Design, Clean Architecture, GOOS, Designing Data-Intensive Applications, PEAA, Release It!, Continuous Delivery, GoF, the OWASP standards, etc.) — the full inventory lives in [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md).
 2. **Per-source summaries.** Each book/article was summarized into a structured note in [`Resources/`](Resources/) (Books, Articles, Papers, Standards, Originals). These summaries capture the principles, smell catalogs, patterns, and counterpoints from each source — not full reproductions, but enough to drive synthesis. A cross-cutting synthesis of these summaries — the themes that recur across sources and the points where the canon disagrees with itself — lives in [`THEMES.md`](THEMES.md).
-3. **Cross-source synthesis into skills.** The summaries were synthesized into ~12 topical **skill documents** in [`skills/`](skills/) — the canonical, human-readable references. Each skill cites the specific chapters and articles that drove each section, and reconciles tensions between sources (e.g., Clean Code ch.4 vs. APOSD ch.12-15 on comments).
+3. **Cross-source synthesis into skills.** The summaries were synthesized into ~13 topical **skill documents** in [`skills/`](skills/) — the canonical, human-readable references. Each skill cites the specific chapters and articles that drove each section, and reconciles tensions between sources (e.g., Clean Code ch.4 vs. APOSD ch.12-15 on comments).
 4. **Agent compilation.** Each skill is compiled into a concise **agent prompt** at `~/.claude/agents/quality-*.md`. The agents are the executable form; the skill files are the reasoning trail.
 5. **Orchestration.** The `/quality` slash command routes a diff to the relevant agents, runs them in parallel, normalizes severity, and aggregates the report.
 
@@ -41,7 +41,7 @@ Then in any git repo, run `/quality` from Claude Code.
 
 `install.sh` deploys:
 
-- 14 agent files into `~/.claude/agents/quality-*.md`
+- 15 agent files into `~/.claude/agents/quality-*.md`
 - The `/quality` orchestrator into `~/.claude/commands/quality.md`
 
 Each agent is wired to read its canonical reference from wherever you cloned this repo (the absolute path is substituted in at install time, replacing the `__SKILLS_DIR__` placeholder in the bundled files under `claude/`). Re-running the installer is idempotent — files already up to date are skipped, no backups created.
@@ -98,6 +98,7 @@ The framework keeps three synchronized copies of every agent (canonical → bund
 | `skills/test-quality.md` | F.I.R.S.T., AAA, naming, test doubles, xUnit Pattern smells, coverage; GOOS Listen-to-the-Tests as organizing principle | `~/.claude/agents/quality-test-quality.md` |
 | `skills/delivery.md` | CD pipeline readiness, trunk-based dev, 12-Factor compliance, feature flags, expand-contract migrations, observability prereqs | `~/.claude/agents/quality-delivery.md` |
 | `skills/distributed.md` | Waldo's four differences, replication/consistency, idempotency, partitioning, microservice boundaries, CQRS/ES tradeoffs | `~/.claude/agents/quality-distributed.md` |
+| `skills/concurrency.md` | In-process concurrency: the three hazards (atomicity, visibility, liveness), shared mutable state, races, locking discipline & deadlock, high-level utilities, async/event-loop, thread-safety contracts, testing concurrent code | `~/.claude/agents/quality-concurrency.md` |
 | `skills/patterns.md` | GoF + HFDP pattern recognition vocabulary, anti-patterns (Singleton/Visitor abuse), modern alternatives | `~/.claude/agents/quality-patterns.md` |
 | `skills/persistence.md` | PEAA pattern catalog: Active Record vs Data Mapper, Unit of Work, Repository, Lazy Load + N+1, transactions, migrations | `~/.claude/agents/quality-persistence.md` |
 | `skills/gates.md` | Objective tool-measured floor: lint, cyclomatic complexity, function length, duplication, coverage, mutation score, CRAP — runs tools and reports pass/fail vs explicit thresholds | `~/.claude/agents/quality-gates.md` |
@@ -135,6 +136,7 @@ This mirrors the lesson of [unclebob/swarm-forge](https://github.com/unclebob/sw
 | `skills/process.md` | Built from the maintainer's CLAUDE.md "Planning Process" section, grounded in Code Complete + Pragmatic Programmer + Clean Coder + MMM + APOSD |
 | `skills/delivery.md` | Synthesized fresh from Continuous Delivery + Trunk-Based Development + 12-Factor + Feature Toggles (Hodgson) — no prior agent ancestor |
 | `skills/distributed.md` | Synthesized fresh from DDIA + Waldo's "A Note on Distributed Computing" + Microservices/CQRS/Event Sourcing — no prior agent ancestor |
+| `skills/concurrency.md` | Synthesized fresh from Effective Java ch.11 (items 78–84) + DDIA ch.7 + Clean Code ch.13 + SICP ch.3 + Release It! (Blocked Threads) + Out of the Tar Pit — the in-process counterpart to `distributed.md`; no prior agent ancestor |
 | `skills/patterns.md` | Synthesized fresh from GoF + Head First Design Patterns + Effective Java refinements + APOSD ch.19 counterweight — no prior agent ancestor |
 | `skills/persistence.md` | Synthesized fresh from PEAA pattern catalog + DDIA storage chapters + Effective Java resource-management items + DDD Repository — no prior agent ancestor |
 | `skills/security-review.md` | Adapted from the `security-auditor` agent and extended with explicit security standards references |
@@ -364,6 +366,25 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
 - **Microservices** — Fowler & Lewis (martinfowler.com) → Microservice Boundaries section
 - **CQRS** — Fowler (martinfowler.com) → CQRS / Event Sourcing section
 - **Event Sourcing** — Fowler (martinfowler.com) → CQRS / Event Sourcing section
+
+### `skills/concurrency.md`
+
+**Books**
+- **Effective Java 3rd ed.** — Bloch (2018) ch.11 (Concurrency)
+  - item 78 (synchronize access to shared mutable state) → § 0 Three Hazards + § 1 Shared Mutable State + § 2 Atomicity + § 3 Visibility
+  - item 79 (avoid excessive synchronization — no alien calls under a lock) → § 4 Locking Discipline
+  - items 80–81 (executors/tasks over threads; concurrency utilities over `wait`/`notify`) → § 6 Prefer High-Level Concurrency Utilities
+  - items 82–84 (document thread safety; lazy init; don't depend on the scheduler) → § 2 lazy init, § 5 Liveness, § 8 Thread-Safety Contracts
+- **Designing Data-Intensive Applications** — Kleppmann (2017) ch.7 → § 2 Atomicity (lost updates, the in-memory analog of weak isolation)
+- **Clean Code** — Martin (2008) ch.13 (Concurrency) → § 0 organizing rule ("race/deadlock/update problems are due to mutable variables") + § 1
+- **SICP** — Abelson & Sussman (1996) ch.3 → § 1 the cost of assignment/state (why confinement & immutability win)
+- **Release It! 2nd ed.** — Nygard (2018) → § 5 Liveness Hazards (Blocked Threads, thread-pool exhaustion; cross-ref distributed § 10, architecture § 5)
+
+**Articles & Papers**
+- **Out of the Tar Pit** — Moseley & Marks (2006) → § 1 state as the great complexity multiplier (minimize shared mutable state first)
+- **FP Basics** — Robert C. Martin → § 0/§ 1 "no assignment → no race conditions"
+- **Eradicating Non-Determinism in Tests** — Fowler (martinfowler.com) → § 9 Testing Concurrent Code (flaky-test discipline)
+- **Java Concurrency in Practice** — Goetz et al. (informal reference) → locking discipline, safe publication, and the memory-model framing throughout
 
 ### `skills/patterns.md`
 

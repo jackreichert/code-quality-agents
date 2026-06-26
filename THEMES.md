@@ -1,6 +1,6 @@
 # Cross-Cutting Themes — What the Whole Library Agrees (and Disagrees) On
 
-A synthesis *across* the 74 resource summaries in [`Resources/`](Resources/). Where [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md) is the **per-resource index** ("which book owns which idea") and [`CONSTITUTION.md`](CONSTITUTION.md) is the **write-time rule set**, this document is the **horizontal cut**: the ideas that recur across many sources, the sources that back each one, and — most usefully — the places where the canon openly disagrees with itself.
+A synthesis *across* the 68 resource summaries in [`Resources/`](Resources/). Where [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md) is the **per-resource index** ("which book owns which idea") and [`CONSTITUTION.md`](CONSTITUTION.md) is the **write-time rule set**, this document is the **horizontal cut**: the ideas that recur across many sources, the sources that back each one, and — most usefully — the places where the canon openly disagrees with itself.
 
 > **How it was built.** Six readers each read one cluster of the library in full (Canon + Language; Architecture + Domain; Testing; Culture/Process; Articles; Standards + Papers) and extracted themes-with-citations. This document merges those into cross-cutting themes. Every theme lists the sources that actually state it — not generalized from memory.
 >
@@ -34,7 +34,7 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 **Functional discipline: pure core, immutable data, push I/O to the edges.** A thread that runs from **SICP** (higher-order procedures as the primary tool) through **Effective Java** (lambdas, minimize mutability) and **Uncle Bob's FP Basics** ("no assignment → no race conditions") to **Out of the Tar Pit** (FRP), **Clean Architecture ch.6** (functional programming "removes assignment"), and the testing books' **functional-core / mutable-shell**. Brake on the enthusiasm: Effective Java 45 ("streams judiciously") and APOSD ch.20 (simpler imperative code is often faster *and* clearer).
 
-**Minimize mutable and shared state, especially under concurrency.** Broad consensus; shared mutable state is *the* concurrency hazard. *(Effective Java 17, 78–84; Clean Code ch.13; Pragmatic Programmer "shared state is incorrect state"; Art of Readable Code ch.9; SICP ch.3.)*
+**Minimize mutable and shared state, especially under concurrency.** Broad consensus; shared mutable state is *the* concurrency hazard. Every concurrency bug reduces to one of three broken single-threaded assumptions — **atomicity** ("this happens all at once"), **visibility** ("a write is seen by the next read" — the memory model), and **liveness/ordering** ("threads make progress sensibly" — deadlock, starvation, pool exhaustion). The cheapest fix is to design the sharing away: immutability and confinement need no locks; everything else is discipline for the state you couldn't eliminate. This is the sharpest instance of §I's **hide-it vs. eliminate-it** fault line — lock-and-share (hide) vs. share-nothing/immutable (eliminate), where the canon leans hard toward eliminate. Note the boundary split: *in-process* concurrency shares memory (locks, atomics, `volatile`, async/event-loop — Effective Java ch.11), while *cross-process* concurrency has no shared memory and "no shared lock can fix it" (Waldo, §IV) — the same word, two different problems with different fixes. *(Effective Java 17, 78–84; Clean Code ch.13; DDIA ch.7; Release It! Blocked Threads; Pragmatic Programmer "shared state is incorrect state"; Art of Readable Code ch.9; SICP ch.3; Uncle Bob FP Basics "no assignment → no race conditions".)*
 
 ---
 
@@ -195,7 +195,7 @@ Where essentially every source that addresses the topic agrees — treat these a
 - **Validate untrusted input at the boundary; never commit secrets; least privilege.**
 - **Config in the environment; observability is a prerequisite, not an afterthought.**
 - **Small, reviewable units of work; review for net-positive code health.**
-- **Minimize mutable/shared state, especially under concurrency.**
+- **Minimize mutable/shared state, especially under concurrency** — and where sharing is unavoidable, guard atomicity, visibility, and liveness explicitly (in-process ≠ cross-process).
 
 ---
 

@@ -35,7 +35,7 @@ When two rules pull in opposite directions, resolve in this fixed order — **ea
 ---
 
 ## Article II — Code
-*Deep reference: [`skills/code-quality.md`](skills/code-quality.md), [`skills/patterns.md`](skills/patterns.md)*
+*Deep reference: [`skills/code-quality.md`](skills/code-quality.md), [`skills/patterns.md`](skills/patterns.md), [`skills/concurrency.md`](skills/concurrency.md)*
 
 - **Names reveal intent.** A reader infers purpose in <3 seconds. Nouns for classes, verbs for methods. Units and constraints in the name (`timeout_ms`, `max_retries`). No `Manager`/`Processor`/`Data`/`Info` filler. No magic numbers.
 - **Functions do one thing.** One responsibility, ~20–30 lines as a soft ceiling. Extract a nested block only when its name genuinely *abstracts* — not to hit a line count.
@@ -43,6 +43,7 @@ When two rules pull in opposite directions, resolve in this fixed order — **ea
 - **DRY, but not prematurely.** Before adding a function, check whether the logic already exists or belongs in a shared module — don't bury general-purpose code where the next person will re-implement it. Two copies that will diverge are a smell; two that coincidentally match are not (Rule of Three).
 - **Comments explain *why*, not *what*.** Capture invariants, trade-offs, and constraints code can't express. Delete comments that paraphrase the code.
 - **Functional discipline.** Prefer pure functions and immutability. Push I/O and side effects to the boundaries; keep the core deterministic. Declarative (`map`/`filter`/`reduce`) over imperative loops where it reads clearer. Early returns over nested conditionals.
+- **Concurrency: eliminate sharing before guarding it.** Prefer immutability and confinement (no shared mutable state → no locks). Where state must be shared across threads, every access is explicitly **atomic** (no check-then-act/read-modify-write races), **visible** (`volatile`/atomic/safe publication — no relying on a plain field crossing threads), and **deadlock-free** (consistent lock ordering, no blocking or alien calls under a lock, bounded waits). Never block the event loop; every `await`/`future` has a timeout and a cancellation path. In-process sharing ≠ cross-process (Article III) — they have different fixes.
 - **Fail fast, fail loud.** Raise specific, meaningful exceptions early; never silently swallow them; never signal errors with `None` or magic values — raise, or return a Result. Log at the appropriate level (debug/info/warn/error).
 - **Apply Beck's four rules of simple design, in order:** passes all tests → no duplication → expresses intent → fewest classes/methods.
 - **Two hats** *(Fowler, Refactoring ch.2)*: never add behavior and refactor in the same step — wear one hat at a time, and never refactor while a test is red. Keep refactoring commits separate from feature commits.

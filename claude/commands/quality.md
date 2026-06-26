@@ -1,6 +1,6 @@
 ---
 description: "Code quality framework — runs targeted quality agents against your current git diff or full project. Usage: /quality [aspects] | /quality project [path] [aspects] | /quality deep [path] (file→method→flow pass)"
-argument-hint: "[project [path]] [deep] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [patterns] [persistence] [gates] [spec] — or omit for all"
+argument-hint: "[project [path]] [deep] [code] [arch] [refactor] [tests] [security] [simplify] [process] [delivery] [distributed] [concurrency] [patterns] [persistence] [gates] [spec] — or omit for all"
 allowed-tools: ["Bash", "Glob", "Grep", "Read", "Task"]
 ---
 
@@ -151,6 +151,7 @@ Parse `$ARGUMENTS` for aspect keywords:
 - `process` → quality-process
 - `delivery` or `deploy` → quality-delivery
 - `distributed` or `dist` → quality-distributed
+- `concurrency` or `concurrent` or `threads` or `async` → quality-concurrency (in-process: races, locks, visibility, deadlock, async/event-loop)
 - `patterns` or `pattern` → quality-patterns
 - `persistence` or `db` or `database` → quality-persistence
 - `gates` → quality-gates (runs tools — lint, complexity, duplication, coverage, mutation — for pass/fail vs thresholds)
@@ -174,6 +175,7 @@ In **project mode**, signals come from the filtered file list (extensions, direc
 | Files in auth/payment/api paths OR diff touches input handling, sessions, secrets — *project mode: same path patterns in file list* | quality-security-review |
 | Migration files (`migrations/`, `db/migrate/`, `alembic/`, `prisma/migrations/`) OR Dockerfiles, k8s manifests, CI/CD configs (`.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`) OR feature-flag config OR `.env*` template changes | quality-delivery |
 | Service-to-service HTTP/gRPC calls (`axios`, `fetch`, `http.Client`, `requests`, `RestTemplate`, `grpc`) OR message-queue imports (`kafka`, `rabbitmq`, `sqs`, `pubsub`, `nats`, `eventbridge`) OR files under `services/` crossing service boundaries | quality-distributed |
+| In-process concurrency primitives in the diff — `Thread`/`Runnable`/`ExecutorService`/`goroutine`/`go func`, `synchronized`/`Lock`/`Mutex`/`RLock`, `volatile`/`Atomic*`/`compare-and-set`, `async`/`await`/`Promise.all`/`asyncio`/coroutines, thread pools, or shared mutable statics/singletons/caches written from concurrent paths — *project mode: same primitives in file content* | quality-concurrency |
 | ORM imports (`hibernate`, `sqlalchemy`, `prisma`, `typeorm`, `sequelize`, `mongoose`, `ActiveRecord`, `EntityFramework`) OR `*.sql`, `*.prisma`, schema files OR repository / DAO files OR raw SQL in diff | quality-persistence |
 | Executable specs / acceptance criteria (`*.feature`, `features/`, `*.story`, Gherkin `Given`/`When`/`Then` in diff) OR a requirements/acceptance-criteria doc | quality-specification |
 | After other reviews complete (always last, on recently modified code) | quality-refactor in Mode 1 (Simplify) |
@@ -190,6 +192,7 @@ In **project mode**, signals come from the filtered file list (extensions, direc
 - If `quality-code-quality` flags multiple smells (Switch on type code, Long Method with branches, etc.) → suggest `/quality patterns` for prescribed pattern recognition AND `/quality refactor` for Fowler moves
 - If significant changes were made → suggest `/quality process` for planning audit
 - If `quality-distributed` flags partial-failure issues → suggest `/quality arch` for the underlying resilience patterns
+- If `quality-code-quality` or `quality-distributed` flags shared mutable state, a race, a lock, or async/threads → suggest `/quality concurrency` for the in-process interleaving review (the shared-memory counterpart to `quality-distributed`'s cross-process review)
 - If `quality-persistence` flags N+1 or migration issues → ensure `quality-delivery` ran (or suggest it) for migration safety
 
 When in doubt: run `quality-code-quality` only.
@@ -386,7 +389,7 @@ Task(
 )
 ```
 
-For files matching **sensitive signals** (auth/payment/api paths, input handling, secrets) also spawn `quality-security-review` on that file. For files with **ORM/SQL signals** also spawn `quality-persistence`. Batches and these add-on agents run in parallel.
+For files matching **sensitive signals** (auth/payment/api paths, input handling, secrets) also spawn `quality-security-review` on that file. For files with **ORM/SQL signals** also spawn `quality-persistence`. For files with **in-process concurrency signals** (threads, executors, locks/`synchronized`, `volatile`/atomics, async/await/coroutines, shared mutable statics) also spawn `quality-concurrency`. Batches and these add-on agents run in parallel.
 
 Collect each agent's per-method findings **and** its per-method input/output notes — the I/O notes feed Phase 2.
 
@@ -543,6 +546,7 @@ The framework's teaching leg: where the review agents *catch* and the Constituti
 - **`/quality simplify`** — final polish pass. Run it last, after other reviews pass.
 - **`/quality delivery`** — when touching schema migrations, deployment config, feature flags, or anything that affects the deploy pipeline. Catches deploy-coupled changes that break rolling deploys.
 - **`/quality distributed`** — when crossing service boundaries (HTTP, gRPC, queues) or touching replication, partitioning, distributed transactions. Reduces every distributed bug to one of Waldo's four categories.
+- **`/quality concurrency`** — the in-process counterpart to `distributed`. When the diff has threads, locks, atomics, `volatile`, async/await, coroutines, thread pools, or shared mutable state. Reduces every interleaving bug to one of three hazards — atomicity, visibility, liveness — and catches the races, deadlocks, and event-loop blocks that single-threaded tests never see.
 - **`/quality patterns`** — after `/quality code` finds smells. Names the GoF pattern that prescribes the fix, OR flags pattern misuse (Singleton-as-global, Visitor abuse). Often invoked alongside `refactor`.
 - **`/quality persistence`** — when ORM, repositories, queries, or migrations are in the diff. Catches N+1, deploy-coupled migrations, missing transaction boundaries, persistence leaking into domain.
 - **`/quality gates`** — the objective floor. Runs real tools (lint, cyclomatic complexity, duplication, coverage, mutation) and reports pass/fail against thresholds rather than opinions. Run it in CI or via the pre-commit hook (`hooks/`) to *block* breaches, not just flag them. The reading agents judge; gates measure. See [`CONSTITUTION.md`](../../CONSTITUTION.md) Article VII for the thresholds and `hooks/` for the git hook.
@@ -555,5 +559,6 @@ The framework's teaching leg: where the review agents *catch* and the Constituti
 
 - `/quality persistence delivery` — DB code + migration safety. Run together when touching schema.
 - `/quality distributed arch` — service-to-service work + the resilience patterns underneath.
+- `/quality concurrency code` — multi-threaded or async code: interleaving hazards + the naming/structure/error-handling underneath.
 - `/quality code patterns refactor` — when reviewing structural code: smells + pattern recognition + prescribed moves.
 - `/quality security review` — pre-PR pass on any user-facing or auth code.
