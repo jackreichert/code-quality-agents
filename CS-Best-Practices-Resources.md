@@ -2,7 +2,9 @@
 
 Foundation reading for clean-code skill synthesis. This file is the **per-resource index** ("which book owns which idea"); for the **cross-cutting synthesis** — themes that recur across many sources, where they converge, and where the canon disagrees with itself — see [`THEMES.md`](THEMES.md).
 
-> **Coverage note:** Not every book listed here drove the `/quality` framework's synthesis. About 10 of the 24 books here are deeply integrated into the agents (Clean Code, Refactoring, APOSD, Clean Architecture, GOOS, Art of Unit Testing, xUnit Test Patterns, Working Effectively with Legacy Code, DDD, Release It!). The remainder are listed for context, future reference, or because their concepts already filter through other primary sources. For the honest "what's actually synthesized vs. what's just listed" breakdown, see [`Code-Quality-Skills/README.md`](Code-Quality-Skills/README.md#whats-deliberately-not-synthesized).
+> **Coverage note:** Not every book listed here drove the `/quality` framework's synthesis. About 10 of the original core were deeply integrated into the agents (Clean Code, Refactoring, APOSD, Clean Architecture, GOOS, Art of Unit Testing, xUnit Test Patterns, Working Effectively with Legacy Code, DDD, Release It!). The remainder are listed for context, future reference, or because their concepts already filter through other primary sources. For the honest "what's actually synthesized vs. what's just listed" breakdown, see [`Code-Quality-Skills/README.md`](Code-Quality-Skills/README.md#whats-deliberately-not-synthesized).
+>
+> **2026-06 expansion:** 13 books (#29–41) were added to close named gaps — concurrency (JCiP), performance & query hygiene (SQL Performance Explained, Database Internals, Systems Performance), reliability/ops (SRE), functional discipline (Grokking Simplicity, Domain Modeling Made Functional), security-by-design (Building Secure and Reliable Systems, Threat Modeling), distributed/integration (Building Microservices, Enterprise Integration Patterns), change-economics (Tidy First?), and DDD how-to (Implementing DDD). Chapter summaries and THEMES.md are updated; skill integration follows.
 
 ---
 
@@ -19,6 +21,7 @@ Foundation reading for clean-code skill synthesis. This file is the **per-resour
 | 5 | **Refactoring** (2nd ed.) | Martin Fowler | 1999/2018 | Smell catalog, refactoring mechanics, when/how to change code |
 | 6 | **A Philosophy of Software Design** | John Ousterhout | 2018/2021 | Complexity theory, deep modules, information hiding |
 | 7 | **Working Effectively with Legacy Code** | Michael Feathers | 2004 | Seams, test harnesses, safe change in untested systems |
+| 34 | **Tidy First?** | Kent Beck | 2023 | Tidyings catalog, structure-vs-behavior, coupling/cohesion, design economics |
 
 ### Clean Architecture Trilogy (Uncle Bob)
 
@@ -35,6 +38,9 @@ Foundation reading for clean-code skill synthesis. This file is the **per-resour
 | 11 | **Patterns of Enterprise Application Architecture** | Martin Fowler | 2002 | Layering, ORMs, concurrency, session state |
 | 12 | **Designing Data-Intensive Applications** | Martin Kleppmann | 2017 | Storage, replication, transactions, distributed systems |
 | 13 | **Release It!** (2nd ed.) | Michael T. Nygard | 2018 | Stability patterns, circuit breakers, bulkheads, production-readiness |
+| 37 | **Building Microservices** (2nd ed.) | Sam Newman | 2021 | Service decomposition, information hiding, communication, resilience, observability |
+| 38 | **Enterprise Integration Patterns** | Gregor Hohpe, Bobby Woolf | 2003 | 65 async-messaging patterns — channels, routing, transformation, endpoints |
+| 41 | **Implementing Domain-Driven Design** | Vaughn Vernon | 2013 | Tactical + strategic DDD how-to — aggregates, domain events, context mapping |
 
 ### Testing
 
@@ -45,6 +51,7 @@ Foundation reading for clean-code skill synthesis. This file is the **per-resour
 | 16 | **The Art of Unit Testing** (3rd ed.) | Roy Osherove | 2023 | Isolation, stubs, mocks, maintainable tests |
 | 17 | **xUnit Test Patterns** | Gerard Meszaros | 2007 | Test smell catalog, pattern library |
 | 27 | **Unit Testing: Principles, Practices, and Patterns** | Vladimir Khorikov | 2020 | Four Pillars, Classical vs. London school, integration testing, anti-patterns |
+| 28 | **Specification by Example** | Gojko Adzic | 2011 | Key examples, living documentation, Three Amigos, executable specs |
 
 ### Engineering Culture & Process
 
@@ -64,6 +71,35 @@ Foundation reading for clean-code skill synthesis. This file is the **per-resour
 | 22 | **Effective Java** (3rd ed.) | Joshua Bloch | 2018 | Idiomatic Java; principles transfer to all OO languages |
 | 23 | **The Art of Readable Code** | Boswell, Foucher | 2011 | Surface-level clarity — names, loops, conditionals |
 | 24 | **SICP** | Abelson, Sussman | 1996 | Abstraction, recursion, interpreters — foundational |
+
+### Concurrency
+
+| # | Title | Author(s) | Year | Focus |
+|---|-------|-----------|------|-------|
+| 29 | **Java Concurrency in Practice** | Brian Goetz et al. | 2006 | Threads, locks, the memory model, safe publication, atomicity/visibility/liveness |
+
+### Performance & Reliability
+
+| # | Title | Author(s) | Year | Focus |
+|---|-------|-----------|------|-------|
+| 30 | **SQL Performance Explained** | Markus Winand | 2012 | Index anatomy, query performance, `SELECT *`/over-fetch, joins, sorting, pagination |
+| 31 | **Database Internals** | Alex Petrov | 2019 | Storage engines (B-tree/LSM), WAL, distributed consensus & replication |
+| 32 | **Systems Performance** (2nd ed.) | Brendan Gregg | 2020 | Performance methodology — USE method, latency analysis, profiling, observability |
+| 33 | **Site Reliability Engineering** | Beyer, Jones, Petoff, Murphy (eds.) | 2016 | SLIs/SLOs, error budgets, toil, four golden signals, incident response |
+
+### Functional
+
+| # | Title | Author(s) | Year | Focus |
+|---|-------|-----------|------|-------|
+| 35 | **Grokking Simplicity** | Eric Normand | 2021 | Actions/calculations/data, immutability, first-class functions, onion architecture |
+| 36 | **Domain Modeling Made Functional** | Scott Wlaschin | 2018 | DDD + FP, algebraic types, illegal states unrepresentable, railway-oriented errors |
+
+### Security
+
+| # | Title | Author(s) | Year | Focus |
+|---|-------|-----------|------|-------|
+| 39 | **Building Secure and Reliable Systems** | Adkins et al. (Google) | 2020 | Security & reliability as design properties, least privilege, design for recovery |
+| 40 | **Threat Modeling: Designing for Security** | Adam Shostack | 2014 | STRIDE, the four-question framework, data-flow diagrams, attack trees, mitigation |
 
 ---
 
@@ -149,16 +185,20 @@ Foundation reading for clean-code skill synthesis. This file is the **per-resour
 | Function design | Clean Code ch.3, Code Complete |
 | SOLID | Uncle Bob articles + Clean Architecture |
 | Design patterns | GoF, Head First Design Patterns |
-| Refactoring | Fowler Refactoring 2nd ed., Working Effectively with Legacy Code |
+| Refactoring | Fowler Refactoring 2nd ed., Working Effectively with Legacy Code, Tidy First? |
 | Testing / TDD | TDD by Example, GOOS, Art of Unit Testing, xUnit Test Patterns, Khorikov |
 | Test doubles | Mocks Aren't Stubs (Fowler), Art of Unit Testing, xUnit Test Patterns ch.11 |
 | Test strategy / distribution | Test Pyramid (Fowler/Vocke), Diverse Fantastical Shapes (Fowler) |
 | Test quality / pillars | Khorikov Four Pillars, GOOS ch.18, Art of Unit Testing ch.7–9 |
 | Flaky tests | Eradicating Non-Determinism (Fowler) |
-| Architecture | Clean Architecture, PEAA, DDD |
-| Error handling | Clean Code ch.7, Release It! |
-| Performance | Code Complete, DDIA |
-| Security | OWASP Top 10, ASVS |
+| Architecture | Clean Architecture, PEAA, DDD, Implementing DDD |
+| Error handling | Clean Code ch.7, Release It!, Domain Modeling Made Functional (Result/railway) |
+| Concurrency | Java Concurrency in Practice, Clean Code ch.13, Effective Java ch.11 |
+| Functional programming | Grokking Simplicity, Domain Modeling Made Functional, SICP, Uncle Bob FP Basics |
+| Performance | SQL Performance Explained, Systems Performance, Database Internals, Code Complete, DDIA |
+| Distributed / integration | Waldo, DDIA, Building Microservices, Enterprise Integration Patterns, Release It! |
+| Reliability / operability | Site Reliability Engineering, Release It!, 12-Factor, Accelerate |
+| Security | OWASP Top 10, ASVS, Threat Modeling, Building Secure and Reliable Systems |
 | Code review | Software Eng @ Google, Google Eng Practices |
 | Complexity management | APOSD, Out of the Tar Pit, No Silver Bullet |
 

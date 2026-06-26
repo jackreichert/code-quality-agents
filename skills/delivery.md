@@ -167,6 +167,7 @@ Each step ships as a separate deployment.
 - [ ] **Health checks gate rollout** — automated promotion only if health stays green.
 - [ ] **Rollback is automated** — one command, well-understood, tested at least quarterly.
 - [ ] **No long manual checklists** for production deploys. Automate or eliminate steps that humans perform.
+- [ ] **Release pace honors the error budget** — when the SLO's budget is exhausted, releases freeze until reliability recovers (Site Reliability Engineering ch.4); it turns a release-vs-stability argument into arithmetic.
 
 **Flag:** deploys that require manual sequence ("first run X, then Y, then Z"), missing health checks, rollback procedures that exist only in tribal knowledge, all-or-nothing big-bang deploys for non-trivial changes.
 
@@ -199,17 +200,20 @@ The first two measure **speed**; the last two measure **stability**. Elite teams
 
 ## 9. Observability Prerequisites
 
-*Source: SE@Google ch.14, Release It! ch.10*
+*Source: SE@Google ch.14, Release It! ch.10, Site Reliability Engineering chs.4-6, 15 (Beyer/Jones/Petoff/Murphy)*
 
 A change going to production needs at minimum:
 
 - [ ] **Logs** (stdout, structured) — see § 5
 - [ ] **Metrics** — request rate, error rate, latency (RED method) for any new service or endpoint
+- [ ] **Four golden signals** instrumented for new services — **latency, traffic, errors, saturation** (SRE ch.6). RED covers the first three; saturation (how full the system is) is the one most often missed.
+- [ ] **SLIs/SLOs defined** for user-facing behavior — pick a few meaningful indicators, set objectives as targets; 100% is the wrong target, the error budget (1 − SLO) is the gap you're allowed to spend (SRE ch.4).
 - [ ] **Traces** — distributed tracing IDs propagated through the call (cross-ref distributed.md)
-- [ ] **Alerts** — on the *symptoms users care about*, not internal counters
+- [ ] **Alerts** — on the *symptoms users care about* (the golden signals), not internal counters; page only on actionable SLO threats.
 - [ ] **Dashboards** — pre-built or templated, not constructed during an incident
+- [ ] **Postmortem path is blameless** — when this change causes an incident, the team has a learning-not-punishment process (SRE ch.15), and recurring manual remediation is tracked as **toil** to be automated away (SRE ch.5).
 
-**Flag:** new service/endpoint with no metrics, alerts that page on internal counters rather than user-facing failures, missing trace propagation through a new service hop, dashboards created reactively after a production issue.
+**Flag:** new service/endpoint with no metrics or no SLO, saturation signal missing, alerts that page on internal counters rather than user-facing failures, missing trace propagation through a new service hop, dashboards created reactively after a production issue, manual toil accepted as permanent rather than measured and automated.
 
 ---
 

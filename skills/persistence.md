@@ -2,7 +2,7 @@
 
 **Purpose:** Review code that crosses the application↔database boundary — ORMs, repositories, transactions, schema migrations, query patterns. Catches the patterns from PEAA that ORMs implement (or fail to implement correctly) and the N+1 / connection / transaction bugs they hide.
 
-**Sources:** Patterns of Enterprise Application Architecture (Fowler), Designing Data-Intensive Applications (Kleppmann) chs.2-7, Effective Java (Bloch) — resource management items, Domain-Driven Design (Evans) — Repository pattern grounding
+**Sources:** Patterns of Enterprise Application Architecture (Fowler), Designing Data-Intensive Applications (Kleppmann) chs.2-7, Effective Java (Bloch) — resource management items, Domain-Driven Design (Evans) — Repository pattern grounding, SQL Performance Explained (Winand) — indexing & query performance (§10), Database Internals (Petrov) — storage-engine background depth
 
 **When to invoke:**
 - When code uses an ORM (Hibernate, ActiveRecord, Entity Framework, SQLAlchemy, TypeORM, Prisma, etc.)
@@ -87,7 +87,7 @@ Within a UoW, each entity is loaded only once; subsequent queries return the sam
 
 ## 4. Lazy Load and N+1
 
-*Source: PEAA ch.11 — Lazy Load; DDIA ch.3 storage; classic ORM anti-pattern*
+*Source: PEAA ch.11 — Lazy Load; DDIA ch.3 storage; classic ORM anti-pattern. Background depth on the storage engine under the ORM (B-tree vs LSM-tree, WAL/recovery): Database Internals (Petrov) Part I.*
 
 Lazy Load defers fetching related data until it's accessed. Misuse is the #1 ORM performance bug.
 
@@ -226,18 +226,20 @@ If domain hierarchy is mapped to relational tables, the strategy is consequentia
 
 ## 10. Query Patterns and SQL Hygiene
 
-*Source: DDIA ch.3 — Storage and Retrieval*
+*Source: SQL Performance Explained (Winand) — indexing, sargability, covering indexes, pagination; DDIA ch.3 — Storage and Retrieval*
 
 - [ ] **No SQL string concatenation with user input** (cross-ref security-review — SQL injection).
 - [ ] **Parameterized queries always**. ORM-generated queries are usually safe; raw SQL must use bind parameters.
-- [ ] **Indexes match query patterns** — `WHERE` and `ORDER BY` columns; covering indexes for hot reads.
-- [ ] **No `SELECT *` in production code** — explicit columns; prevents over-fetching and breaks-on-add.
+- [ ] **Indexes match query patterns** — `WHERE` and `ORDER BY` columns; covering indexes for hot reads. In a concatenated index, column order is everything — most-selective/equality columns lead (Winand ch.2).
+- [ ] **Predicates are sargable** — no function or implicit cast wrapping an indexed column (`WHERE UPPER(name)=…`, leading `LIKE '%x'`); these disable the index and force a full scan (Winand ch.2).
+- [ ] **Covering indexes for hot reads** — list the queried columns in the index so the table is never touched (index-only scan); the strongest case for naming explicit columns (Winand ch.5).
+- [ ] **No `SELECT *` in production code** — explicit columns; prevents over-fetching, kills covering indexes, and breaks-on-add (Winand ch.5).
 - [ ] **`LIMIT` on every query that could return unbounded results**.
-- [ ] **Pagination uses keyset / seek pagination** for large tables, not `OFFSET` (linear cost).
+- [ ] **Pagination uses keyset / seek pagination** (`WHERE id > :last ORDER BY id`) for large tables, not `OFFSET` — offset re-scans and discards every skipped row, so page 1000 is 1000× slower; keyset stays constant-time (Winand ch.7).
 - [ ] **Bulk operations use bulk APIs** — `INSERT ... VALUES (...), (...), ...` not 1000 separate inserts.
 - [ ] **`EXPLAIN ANALYZE` reviewed** for new queries on hot paths — full table scans flagged.
 
-**Flag:** `SELECT *` in any production query; missing `LIMIT` on user-controlled queries; OFFSET-based pagination on tables that grow large; loops issuing one INSERT per iteration; queries on unindexed columns in hot paths.
+**Flag:** `SELECT *` in any production query; non-sargable predicates wrapping an indexed column; missing `LIMIT` on user-controlled queries; OFFSET-based pagination on tables that grow large; loops issuing one INSERT per iteration; queries on unindexed columns in hot paths.
 
 ---
 

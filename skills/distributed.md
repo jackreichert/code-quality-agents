@@ -2,7 +2,7 @@
 
 **Purpose:** Review code that crosses process or machine boundaries — services calling services, databases replicated across regions, queues coordinating producers and consumers. The local-thinking-applied-to-remote-code class of bugs.
 
-**Sources:** Designing Data-Intensive Applications (Kleppmann), A Note on Distributed Computing (Waldo et al. 1994), Release It! (Nygard), Microservices (Fowler & Lewis), CQRS (Fowler), Event Sourcing (Fowler), Patterns of Distributed Systems (informal — Joshi)
+**Sources:** Designing Data-Intensive Applications (Kleppmann), A Note on Distributed Computing (Waldo et al. 1994), Release It! (Nygard), Microservices (Fowler & Lewis), Building Microservices (Newman), Enterprise Integration Patterns (Hohpe & Woolf), Database Internals (Petrov), CQRS (Fowler), Event Sourcing (Fowler), Patterns of Distributed Systems (informal — Joshi)
 
 **When to invoke:**
 - When code makes a remote call (HTTP, gRPC, queue, RPC)
@@ -74,9 +74,10 @@ Wall-clock time across machines is unreliable. Sequencing by timestamp is a bug.
 
 ## 3. Replication & Consistency
 
-*Source: DDIA chs.5, 9*
+*Source: DDIA chs.5, 9; Database Internals chs.10–14 (Petrov) for consensus/replication/leader-election internals*
 
 - [ ] **Replication topology is documented** — single-leader, multi-leader, or leaderless?
+- [ ] **Leader election guards against split-brain** — election and failure detection must agree; a single-leader design ships a consensus protocol (Raft/Paxos) for failover, not ad-hoc promotion (Petrov ch.10, ch.14).
 - [ ] **Consistency model is named**: linearizable, sequential, causal, eventual. The choice determines which user-visible anomalies are possible.
 - [ ] **Read-your-writes** — does a user see their own write immediately? (Often violated by async replication + load-balanced reads.)
 - [ ] **Monotonic reads** — does a user not see writes go backward in time?
@@ -89,17 +90,20 @@ Wall-clock time across machines is unreliable. Sequencing by timestamp is a bug.
 
 ## 4. Idempotency and Exactly-Once
 
-*Source: DDIA ch.11 — "Stream Processing", Release It! ch.4*
+*Source: DDIA ch.11 — "Stream Processing", Release It! ch.4, EIP ch.4 & ch.8 (Hohpe & Woolf)*
 
 True exactly-once delivery doesn't exist over an unreliable network. Idempotent processing achieves the same end-state.
 
-- [ ] **Every state-mutating remote operation is idempotent** OR guarded by an idempotency key (e.g., `Idempotency-Key` header, deduplication table).
+- [ ] **Every state-mutating remote operation is idempotent** OR guarded by an idempotency key (e.g., `Idempotency-Key` header, deduplication table). This is EIP's **Idempotent Receiver** — the answer to at-least-once delivery.
 - [ ] **Idempotency window is documented** — how long are keys retained?
 - [ ] **Side effects in retries are safe** — sending an email, charging a card, publishing a message all need explicit at-most-once guards or are idempotent at the receiver.
 - [ ] **Outbox pattern** for "save-and-publish" — write the event to a DB outbox in the same transaction as the state change; a separate process publishes from the outbox.
+- [ ] **Durable queues persist messages** so a broker crash doesn't drop them — EIP **Guaranteed Delivery**.
+- [ ] **Undeliverable / poison messages route to a Dead Letter Channel** (EIP) rather than blocking the consumer or being silently dropped.
+- [ ] **Messaging stays out of business logic** — the consumer touches the broker through a thin adapter, not littered through the domain (EIP **Message Endpoint** / Messaging Gateway).
 - [ ] **Saga / compensating transactions** for distributed workflows — no global ACID; explicit compensation paths for each step that can fail.
 
-**Flag:** retries on non-idempotent endpoints; "we send the email after the DB commit" without outbox; multi-service workflows assuming success ordering; missing dead-letter handling on consumers.
+**Flag:** retries on non-idempotent endpoints; "we send the email after the DB commit" without outbox; multi-service workflows assuming success ordering; missing dead-letter handling on consumers; non-durable queues losing messages on crash; broker API leaking into domain code.
 
 ---
 
@@ -135,15 +139,17 @@ ACID has a precise meaning per database; isolation level matters more than the m
 
 ## 7. Microservice Boundaries
 
-*Source: Microservices (Fowler & Lewis), DDD bounded contexts*
+*Source: Microservices (Fowler & Lewis), Building Microservices (Newman), DDD bounded contexts*
 
 - [ ] **Service boundary maps to a business capability** (Conway's law inverted) — not a CRUD-table per service.
+- [ ] **Boundary hides a lot behind a narrow, stable interface** — Newman's information-hiding test; the worst coupling is content coupling (reaching into another service's internals).
 - [ ] **Each service owns its data**. No shared databases. Cross-service reads via API or events, not joins.
 - [ ] **Smart endpoints, dumb pipes** — logic in services, not in the bus / ESB.
-- [ ] **Backward-compatible APIs** — additions are safe; field renames/removals require deprecation cycles.
+- [ ] **Backward-compatible APIs** — additions are safe; field renames/removals require deprecation cycles. Use tolerant readers and avoid breaking changes; version only as a last resort (Newman).
+- [ ] **Designed for failure** — every cross-service call assumes the dependency can be slow or down, and degrades gracefully (Newman: a slow dependency is worse than a dead one).
 - [ ] **Independent deployability** — can this service deploy without coordinating with others? If not, the boundary is wrong.
 
-**Flag:** services sharing a database; services that must deploy together (distributed monolith); business logic in API gateways; chatty service-to-service patterns (N round trips per user request).
+**Flag:** services sharing a database; services that must deploy together (distributed monolith — Newman's central anti-pattern); business logic in API gateways; chatty service-to-service patterns (N round trips per user request); a service that reaches into another's internals instead of its published interface.
 
 ---
 

@@ -213,7 +213,7 @@ The Duplicate Code smell above catches repetition **visible in the diff**. This 
 
 ## 6. Functional Programming
 
-*Source: Clean Architecture ch.6 (Martin), Clean Code FP series (blog.cleancoder.com), Functional Programming Principles in Scala (Odersky — conceptual), Out of the Tar Pit (Moseley/Marks)*
+*Source: Clean Architecture ch.6 (Martin), Grokking Simplicity (Normand), Clean Code FP series (blog.cleancoder.com), Functional Programming Principles in Scala (Odersky — conceptual), Out of the Tar Pit (Moseley/Marks)*
 
 **Uncle Bob's framing (Clean Architecture):**
 The three programming paradigms each impose discipline by *removing* a capability:
@@ -225,18 +225,22 @@ They are **not competing alternatives** — they are complementary constraints. 
 
 > "All race conditions, deadlock conditions, and concurrent update problems are due to mutable variables." — Robert C. Martin
 
+**Normand's operational frame (Grokking Simplicity):**
+Classify every piece of code as an **action** (its result depends on *when* or *how often* it runs — I/O, mutation, reads of shared state), a **calculation** (a pure input→output function, safe to call anywhere and trivial to test), or **data** (inert recorded facts). The discipline below *is* this lens: pull calculations out of actions, isolate the actions you can't remove, and build the deterministic core out of calculations over immutable data. **Stratified design** keeps each function at one level of abstraction, calling only the layer just below it.
+
 **Check for:**
 
 - [ ] **Immutability** — are variables reassigned when they don't need to be? Could in-place mutation be replaced with transformation into a new value? Shared mutable state is the primary source of concurrency bugs and unexpected side effects.
   - Bad: `user.name = "Jack"` throughout a function chain
   - Good: `const updatedUser = { ...user, name: "Jack" }` — original untouched
+  - In a mutable language, apply **copy-on-write** *(Grokking Simplicity)*: copy → modify the copy → return it. This turns a write (action) into a read (calculation). Use **defensive copying** only at the boundary with untrusted/legacy code that mutates.
 
 - [ ] **Pure functions** — does the function depend only on its arguments (no hidden global inputs)? Does it produce only its return value (no hidden side effects like logging, mutation, or I/O)?
   - A pure function is trivially testable: call it with inputs, assert the output. No mocks, no setup, no teardown.
   - Flag: function that both computes a value AND logs, mutates state, or writes to DB
 
 - [ ] **Side effect isolation** — are side effects (I/O, network, DB, randomness, clock, mutation) pushed to the boundaries of the system?
-  - The goal: a pure functional core surrounded by a thin imperative shell
+  - The goal: a pure functional core surrounded by a thin imperative shell — Normand's **onion architecture** *(Grokking Simplicity ch.18)*: calculations over data at the center, actions and I/O only at the outer shell
   - Business logic should be testable without any I/O; the shell wires the pure core to the outside world
   - This is the **Humble Object** pattern *(xUnit Test Patterns — Meszaros; Unit Testing P/P/P — Khorikov)*: keep the hard-to-test shell *humble* — almost no logic — and move all behavior into the testable core. Actively relocate logic *out* of the shell, don't merely draw a boundary around a fat one.
   - Because the shell is logic-free, it can be excluded from coverage/mutation targets without lying about test strength. If the shell is too risky to skip, it isn't humble enough — that's the smell.
@@ -329,7 +333,7 @@ The code-quality reviewer surfaces these symptoms; the architecture reviewer pre
 
 ## 8. Performance & Scalability
 
-*Source: Code Complete ch.25 (McConnell), The Pragmatic Programmer ch.7 (Hunt/Thomas), Designing Data-Intensive Applications (Kleppmann)*
+*Source: Code Complete ch.25 (McConnell), The Pragmatic Programmer ch.7 (Hunt/Thomas), Designing Data-Intensive Applications (Kleppmann), Systems Performance (Gregg)*
 
 **Check for:**
 
@@ -355,8 +359,12 @@ The code-quality reviewer surfaces these symptoms; the architecture reviewer pre
 
 - [ ] **Premature optimization** — flag optimizations that have no measured performance baseline
   - Clever bit-twiddling, micro-optimized loops, hand-rolled algorithms in domain code
-  - Profile first; optimize what's actually slow. "Premature optimization is the root of all evil." — Knuth
+  - **Profile/measure the bottleneck before optimizing** *(Systems Performance — Gregg)*; intuition about hot paths is usually wrong. "Premature optimization is the root of all evil." — Knuth
   - The *absence* of obvious performance problems is not a reason to optimize
+
+- [ ] **Methodology over guessing** *(Systems Performance — Gregg)* — when a change claims a performance win, is there a method behind it, or just a hunch (the "streetlight" anti-method)?
+  - **USE method** — for each saturable resource (CPU, memory, disk, network, thread/connection pool), check **Utilization, Saturation, Errors**. A pool sized by guesswork or a queue with no saturation signal is a flag.
+  - **Latency-percentile analysis** — judge latency by its *distribution* (p50/p95/p99), never a single average; tail latency is what users feel. Flag SLOs, benchmarks, or logging that report only a mean.
 
 - [ ] **Unnecessary materialization** — converting lazy sequences to full lists when not needed
   ```python

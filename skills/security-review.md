@@ -143,12 +143,15 @@ Work through each category. Don't skip based on what you think is likely.
 
 *A04 is distinct from implementation bugs — it's the **absence of secure design** at the architecture level. Catch it before code, not in code.*
 
-- [ ] **Threat model exists** for the change — at minimum: who's the attacker, what are they after, what's the trust boundary?
-- [ ] **Trust boundaries explicit** — internal vs external, authenticated vs anonymous, tenant A vs tenant B
+- [ ] **Threat model exists** for the change — work Shostack's four questions: *what are we building, what can go wrong, what do we do about it, did we do a good job?* At minimum: who's the attacker, what are they after, what's the trust boundary? (*Threat Modeling*, Shostack)
+- [ ] **Trust boundaries explicit** — draw the data flow as a DFD and mark every trust-boundary crossing (internal vs external, authenticated vs anonymous, tenant A vs tenant B); threats cluster at the crossings
+- [ ] **Threats enumerated per element** — run **STRIDE** (Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege) against each DFD node and flow
+- [ ] **Each threat dispositioned** — mitigate / eliminate / transfer / accept, recorded as a deliberate trade-off (not silently dropped)
 - [ ] **Abuse cases considered** — not just "user logs in" but "attacker brute-forces login," "attacker enumerates user IDs," "attacker replays request"
 - [ ] **Secure design patterns chosen** — rate limiting on auth, idempotency keys on state mutations, input bounds defined, output encoding selected per sink
 - [ ] **No security-by-obscurity** — relying on attackers not knowing internal IDs, paths, or schema
-- [ ] **Defense in depth** — single-control failures aren't catastrophic (auth gate + authorization checks at data layer)
+- [ ] **Least privilege by default** — no ambient authority; credentials small and scoped to limit blast radius; deny by default; a small trusted computing base (*Building Secure and Reliable Systems*)
+- [ ] **Defense in depth + design for recovery** — single-control failures aren't catastrophic (auth gate + authorization checks at data layer); assume compromise and design to recover to a known-good state (BSRS)
 
 **Flag:** features added without a stated threat model; trust boundary assumptions not documented; "we'll add rate limiting later"; obscurity-as-control patterns; single-layer access control.
 
