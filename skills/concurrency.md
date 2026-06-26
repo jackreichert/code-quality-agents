@@ -4,7 +4,7 @@
 
 This is the **in-process** companion to `distributed.md`. Distributed review owns concurrency *across* processes/machines (no shared memory, no shared lock). This skill owns concurrency *within* one address space, where threads **do** share memory — and that sharing is the hazard. If a race spans machines, route to `distributed.md`; if it spans threads of one process, it's here.
 
-**Sources:** Effective Java ch.11 — items 78–84 (Bloch), Designing Data-Intensive Applications ch.7 (Kleppmann), Java Concurrency in Practice (informal — Goetz et al.), Release It! — Blocked Threads / Thread-pool antipatterns (Nygard), Clean Code ch.13 — Concurrency (Martin), SICP ch.3 — time, state, and the cost of assignment (Abelson & Sussman), Out of the Tar Pit — state as the great multiplier (Moseley & Marks), Uncle Bob — FP Basics ("no assignment → no race conditions")
+**Sources:** Java Concurrency in Practice (Goetz et al.) — *the anchoring text*: the Java Memory Model's `happens-before` rules, safe publication, `@GuardedBy`, and the atomicity / visibility / liveness framing this skill is built on; Effective Java ch.11 — items 78–84 (Bloch), Designing Data-Intensive Applications ch.7 (Kleppmann), Release It! — Blocked Threads / Thread-pool antipatterns (Nygard), Clean Code ch.13 — Concurrency (Martin), SICP ch.3 — time, state, and the cost of assignment (Abelson & Sussman), Out of the Tar Pit — state as the great multiplier (Moseley & Marks), Uncle Bob — FP Basics ("no assignment → no race conditions")
 
 **When to invoke:**
 - When the diff introduces threads, executors, `async`/`await`, coroutines, goroutines, or a thread pool
@@ -78,12 +78,12 @@ A compound action (read-modify-write, check-then-act) is **not** atomic just bec
 
 ## 3. Visibility & the Memory Model
 
-*Source: Effective Java item 78; the Java Memory Model and its equivalents*
+*Source: JCiP ch.3 & ch.16 (the Java Memory Model); Effective Java item 78*
 
 Without a `happens-before` relationship, there is **no guarantee** one thread ever sees another's write — not "eventually," *never* guaranteed.
 
 - [ ] **Flags that signal across threads are `volatile`** (or atomic). A plain `boolean running` polled in a loop can spin forever after another thread sets it false.
-- [ ] **Safe publication** — an object shared after construction is published through a `volatile`/`final` field, a concurrent collection, or a lock. Handing a reference out of a constructor (`this` escape) before it's fully built is a bug.
+- [ ] **Safe publication** — an object shared after construction is published through a `volatile`/`final` field, a concurrent collection, or a lock (JCiP ch.3). Improper publication leaks a *partially constructed* object; handing a reference out of a constructor (`this` escape) before it's fully built is a bug.
 - [ ] **`final` fields used for immutability** — they get safe-publication guarantees; non-final fields of a "logically immutable" object do not.
 - [ ] **No lock-free reads of lock-protected state** — if writes are under a lock, reads must be too (or the field `volatile`), or readers see stale values.
 
@@ -97,9 +97,9 @@ Without a `happens-before` relationship, there is **no guarantee** one thread ev
 
 Locks protect **invariants**, not lines of code. The discipline is as important as the lock.
 
-- [ ] **One lock guards each piece of shared state**, and the guarding lock is documented (e.g. `@GuardedBy`). Mixed locks on the same state is a race.
-- [ ] **Consistent lock ordering** — if any path takes locks A then B, *no* path takes B then A. Inconsistent ordering is the textbook deadlock.
-- [ ] **No alien calls while holding a lock** — calling a callback, listener, or overridable/external method with a lock held invites deadlock and reentrancy surprises. Do as little as possible inside the critical section.
+- [ ] **One lock guards each piece of shared state**, and the guarding lock is documented (e.g. `@GuardedBy`, JCiP ch.2/4 — state the synchronization policy, don't make the next maintainer reverse-engineer it). Mixed locks on the same state is a race.
+- [ ] **Consistent lock ordering** — if any path takes locks A then B, *no* path takes B then A. Impose a global order and hold it everywhere (JCiP ch.10). Inconsistent ordering is the textbook deadlock.
+- [ ] **No alien calls while holding a lock** — calling a callback, listener, or overridable/external method with a lock held invites deadlock and reentrancy surprises; prefer *open calls* (release the lock first) (JCiP ch.10). Do as little as possible inside the critical section.
 - [ ] **No blocking I/O / network / `await` while holding a lock** — it serializes everything and can deadlock the pool.
 - [ ] **Lock granularity is deliberate** — one coarse lock kills throughput; many fine locks invite ordering deadlocks. The choice is justified, not accidental.
 - [ ] **`synchronized(this)` / locking on public objects avoided** — callers can lock on the same monitor and deadlock you; use a private lock object.

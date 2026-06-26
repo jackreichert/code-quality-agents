@@ -249,7 +249,7 @@ Parnas tells you *what* to hide (a likely-to-change decision); Ousterhout adds a
 
 ## 4. Domain-Driven Design Patterns
 
-*Source: Domain-Driven Design (Evans), Implementing DDD (Vernon)*
+*Source: Domain-Driven Design (Evans), Implementing DDD (Vernon), Domain Modeling Made Functional (Wlaschin)*
 
 Only apply these checks when reviewing domain/business logic code (not infrastructure or UI).
 
@@ -259,15 +259,33 @@ Only apply these checks when reviewing domain/business logic code (not infrastru
 - [ ] Can a domain expert read the core domain code and recognize their concepts?
 
 ### Aggregates
+
+*Vernon's four aggregate rules (Implementing DDD ch.10): model true invariants in a consistency boundary, design small aggregates, reference other aggregates by identity only, update other aggregates eventually (via Domain Events) — never in the same transaction. One transaction = one aggregate.*
+
 - [ ] Is there a clear aggregate root that controls access to the aggregate's internals?
-- [ ] Do external objects hold references to aggregate root only (not internal entities)?
+- [ ] Do external objects hold references to aggregate root only (not internal entities)? Do other aggregates appear as **identity references**, not object pointers?
 - [ ] Are business invariants that span multiple objects enforced within a single aggregate (not across aggregates)?
 - [ ] Are aggregates small? Large aggregates create transaction and concurrency problems
+- [ ] Does any single transaction modify more than one aggregate? → reach the other aggregate **eventually** via a Domain Event, and accept eventual consistency between them
 
 ### Bounded Contexts
 - [ ] Is the same concept modeled differently in different parts of the system without explicit translation?
 - [ ] Are there Anti-Corruption Layers at the boundaries between contexts (or between your system and external systems)?
 - [ ] Does a change in one context ripple directly into another? → Context boundary needs hardening
+- [ ] Is integration between contexts done via a named context-mapping pattern (Implementing DDD ch.3, 13 — Shared Kernel, Customer-Supplier, Conformist, Anticorruption Layer, Open Host / Published Language) rather than ad-hoc coupling? Are cross-context handlers idempotent and tolerant of eventual consistency?
+
+### Domain Events
+*Source: Implementing DDD (Vernon) ch.8, 13*
+- [ ] Are significant domain occurrences modeled as first-class Domain Events, named in past tense in the Ubiquitous Language?
+- [ ] Are events used to decouple aggregates and integrate Bounded Contexts (instead of one aggregate directly invoking another)?
+
+### Type-Driven Modeling
+
+*Source: Domain Modeling Made Functional (Wlaschin) ch.5-7*
+
+- [ ] Are illegal states **unrepresentable**? Encode invariants in the types (constrained/single-case types, sum types for "OR" choices) so an invalid value can't exist past the boundary — rather than validating defensively everywhere downstream.
+- [ ] Are primitives wrapped in domain types (`OrderId`, `EmailAddress`) so a raw string can't masquerade as an identity?
+- [ ] Are workflows expressed as pipelines of pure functions with precise input/output types (`UnvalidatedOrder → ValidatedOrder → PricedOrder`), effects captured in the signatures?
 
 ### Domain Services
 - [ ] Does logic that doesn't naturally belong to any entity or value object live as a domain service?

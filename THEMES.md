@@ -1,8 +1,8 @@
 # Cross-Cutting Themes — What the Whole Library Agrees (and Disagrees) On
 
-A synthesis *across* the 68 resource summaries in [`Resources/`](Resources/). Where [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md) is the **per-resource index** ("which book owns which idea") and [`CONSTITUTION.md`](CONSTITUTION.md) is the **write-time rule set**, this document is the **horizontal cut**: the ideas that recur across many sources, the sources that back each one, and — most usefully — the places where the canon openly disagrees with itself.
+A synthesis *across* the 81 resource summaries in [`Resources/`](Resources/). Where [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md) is the **per-resource index** ("which book owns which idea") and [`CONSTITUTION.md`](CONSTITUTION.md) is the **write-time rule set**, this document is the **horizontal cut**: the ideas that recur across many sources, the sources that back each one, and — most usefully — the places where the canon openly disagrees with itself.
 
-> **How it was built.** Six readers each read one cluster of the library in full (Canon + Language; Architecture + Domain; Testing; Culture/Process; Articles; Standards + Papers) and extracted themes-with-citations. This document merges those into cross-cutting themes. Every theme lists the sources that actually state it — not generalized from memory.
+> **How it was built.** Six readers each read one cluster of the library in full (Canon + Language; Architecture + Domain; Testing; Culture/Process; Articles; Standards + Papers) and extracted themes-with-citations. This document merges those into cross-cutting themes. Every theme lists the sources that actually state it — not generalized from memory. *(Extended 2026-06: 13 further books — concurrency, performance & reliability, functional programming, security, and distributed/DDD depth — were summarized and woven into the themes, tensions, and references below.)*
 >
 > **How to read it.** Each theme is one paragraph of claim + the sources that converge on it + the tension, if any. The two most valuable sections are at the end: **§XI Map of Cross-Source Tensions** (where to expect a judgment call) and **§XII Near-Universal Consensus** (what you can treat as settled). When two themes pull apart, the tie-break order is [`CONSTITUTION.md` Article I](CONSTITUTION.md#article-i--conflict-precedence-the-tie-break-order).
 
@@ -30,11 +30,11 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 **DRY — about knowledge, not text — but not prematurely.** One authoritative representation per piece of *knowledge* (Pragmatic Programmer), ranked #2 in Beck's simple-design rules. Tempered by Refactoring's rule of three: don't abstract two coincidentally-similar copies. *(+ Clean Code; Refactoring "Duplicated Code".)*
 
-**Fail fast, handle errors explicitly — with one notable dissent.** Validate at boundaries, raise specific exceptions, never swallow, never signal errors with `null`/magic values. *(Clean Code ch.7; Code Complete ch.8 "barricade"; Pragmatic Programmer Design-by-Contract; Effective Java 69–77; NASA rule 7; OWASP input validation.)* The dissent: **APOSD ch.10 "Define Errors Out of Existence"** argues the "throw lots of exceptions" advice itself *creates* complexity — better to design APIs so the error can't arise. (Effective Java item 69, "exceptions only for the exceptional," partially sides with APOSD.)
+**Fail fast, handle errors explicitly — with one notable dissent.** Validate at boundaries, raise specific exceptions, never swallow, never signal errors with `null`/magic values. *(Clean Code ch.7; Code Complete ch.8 "barricade"; Pragmatic Programmer Design-by-Contract; Effective Java 69–77; NASA rule 7; OWASP input validation.)* The dissent: **APOSD ch.10 "Define Errors Out of Existence"** argues the "throw lots of exceptions" advice itself *creates* complexity — better to design APIs so the error can't arise. (Effective Java item 69, "exceptions only for the exceptional," partially sides with APOSD.) **Domain Modeling Made Functional** lands a third way: encode the error in the *type* — a `Result`/railway-oriented pipeline with illegal states made unrepresentable — so the caller must handle it without exceptions *or* silent `null`s.
 
-**Functional discipline: pure core, immutable data, push I/O to the edges.** A thread that runs from **SICP** (higher-order procedures as the primary tool) through **Effective Java** (lambdas, minimize mutability) and **Uncle Bob's FP Basics** ("no assignment → no race conditions") to **Out of the Tar Pit** (FRP), **Clean Architecture ch.6** (functional programming "removes assignment"), and the testing books' **functional-core / mutable-shell**. Brake on the enthusiasm: Effective Java 45 ("streams judiciously") and APOSD ch.20 (simpler imperative code is often faster *and* clearer).
+**Functional discipline: pure core, immutable data, push I/O to the edges.** A thread that runs from **SICP** (higher-order procedures as the primary tool) through **Effective Java** (lambdas, minimize mutability) and **Uncle Bob's FP Basics** ("no assignment → no race conditions") to **Grokking Simplicity** (the actions / calculations / data triad *is* "push I/O to the edges," made teachable), **Domain Modeling Made Functional** (immutable values, workflows-as-pipelines, types over flags), **Out of the Tar Pit** (FRP), **Clean Architecture ch.6** (functional programming "removes assignment"), and the testing books' **functional-core / mutable-shell**. Brake on the enthusiasm: Effective Java 45 ("streams judiciously") and APOSD ch.20 (simpler imperative code is often faster *and* clearer).
 
-**Minimize mutable and shared state, especially under concurrency.** Broad consensus; shared mutable state is *the* concurrency hazard. Every concurrency bug reduces to one of three broken single-threaded assumptions — **atomicity** ("this happens all at once"), **visibility** ("a write is seen by the next read" — the memory model), and **liveness/ordering** ("threads make progress sensibly" — deadlock, starvation, pool exhaustion). The cheapest fix is to design the sharing away: immutability and confinement need no locks; everything else is discipline for the state you couldn't eliminate. This is the sharpest instance of §I's **hide-it vs. eliminate-it** fault line — lock-and-share (hide) vs. share-nothing/immutable (eliminate), where the canon leans hard toward eliminate. Note the boundary split: *in-process* concurrency shares memory (locks, atomics, `volatile`, async/event-loop — Effective Java ch.11), while *cross-process* concurrency has no shared memory and "no shared lock can fix it" (Waldo, §IV) — the same word, two different problems with different fixes. *(Effective Java 17, 78–84; Clean Code ch.13; DDIA ch.7; Release It! Blocked Threads; Pragmatic Programmer "shared state is incorrect state"; Art of Readable Code ch.9; SICP ch.3; Uncle Bob FP Basics "no assignment → no race conditions".)*
+**Minimize mutable and shared state, especially under concurrency.** Broad consensus; shared mutable state is *the* concurrency hazard. Every concurrency bug reduces to one of three broken single-threaded assumptions — **atomicity** ("this happens all at once"), **visibility** ("a write is seen by the next read" — the memory model), and **liveness/ordering** ("threads make progress sensibly" — deadlock, starvation, pool exhaustion) — the decomposition **Java Concurrency in Practice** makes canonical (safe publication, `@GuardedBy`, the JMM happens-before rules). The cheapest fix is to design the sharing away: immutability and confinement need no locks; everything else is discipline for the state you couldn't eliminate. This is the sharpest instance of §I's **hide-it vs. eliminate-it** fault line — lock-and-share (hide) vs. share-nothing/immutable (eliminate), where the canon leans hard toward eliminate. Note the boundary split: *in-process* concurrency shares memory (locks, atomics, `volatile`, async/event-loop — Effective Java ch.11), while *cross-process* concurrency has no shared memory and "no shared lock can fix it" (Waldo, §IV) — the same word, two different problems with different fixes. *(Java Concurrency in Practice — the canonical, book-length treatment of all three; Effective Java 17, 78–84; Clean Code ch.13; DDIA ch.7; Release It! Blocked Threads; Pragmatic Programmer "shared state is incorrect state"; Art of Readable Code ch.9; SICP ch.3; Uncle Bob FP Basics "no assignment → no race conditions".)*
 
 ---
 
@@ -52,19 +52,19 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 **Wrap and isolate third-party / boundary code.** Define your own interface; learning tests document external behavior and catch upgrade regressions. Named patterns: Adapter, Facade (GoF), Anticorruption Layer (DDD), "skin and wrap the library" (Feathers). *(+ Clean Code ch.8.)*
 
-**A shared, ubiquitous language binds model to code.** DDD's Ubiquitous Language + Bounded Contexts + Context Map; operationalized by Clean Coder's acceptance tests ("requirements are communication, not contract") and expressed structurally by Screaming Architecture.
+**A shared, ubiquitous language binds model to code.** DDD's Ubiquitous Language + Bounded Contexts + Context Map (with **Implementing DDD**'s how-to layer — aggregates, domain events, the context-mapping integration patterns); operationalized by Clean Coder's acceptance tests ("requirements are communication, not contract") and expressed structurally by Screaming Architecture.
 
 ---
 
 ## IV. Distributed Systems & Persistence
 
-**The network is not transparent — remote ≠ local.** **Waldo's** four irreducible differences (latency, no shared memory, **partial failure** — "I don't know whether the call succeeded" — and concurrency) predicted the collapse of CORBA/RMI/DCOM; gRPC/Thrift succeed by being *explicitly* distributed. Echoed by **DDIA ch.8**, **PEAA** ("don't distribute objects unless you have to," citing Waldo), **Fowler/Microservices** ("design for failure," "distributed monolith" as the failure mode), and **Joel's Law of Leaky Abstractions** (RPC leaks into partial failure). Caution flagged: **Clean Architecture ch.27** — service/deployment boundaries do *not* by themselves create decoupling, so don't map DDD contexts onto microservices uncritically.
+**The network is not transparent — remote ≠ local.** **Waldo's** four irreducible differences (latency, no shared memory, **partial failure** — "I don't know whether the call succeeded" — and concurrency) predicted the collapse of CORBA/RMI/DCOM; gRPC/Thrift succeed by being *explicitly* distributed. Echoed by **DDIA ch.8**, **PEAA** ("don't distribute objects unless you have to," citing Waldo), **Fowler/Microservices** and **Newman/Building Microservices** ("design for failure," information-hiding service boundaries, the "distributed monolith" as the failure mode), and **Joel's Law of Leaky Abstractions** (RPC leaks into partial failure). Caution flagged: **Clean Architecture ch.27** — service/deployment boundaries do *not* by themselves create decoupling, so don't map DDD contexts onto microservices uncritically.
 
-**Production systems need explicit failure-containment.** **Release It!** stability patterns — Timeouts, Circuit Breaker, Bulkheads, Fail Fast, Back Pressure, Let It Crash — against its named antipatterns (Cascading Failure, Blocked Threads). Underpinned by DDIA's replication/idempotence mechanics and Clean Architecture's Humble Object (keep the fragile part thin).
+**Production systems need explicit failure-containment.** **Release It!** stability patterns — Timeouts, Circuit Breaker, Bulkheads, Fail Fast, Back Pressure, Let It Crash — against its named antipatterns (Cascading Failure, Blocked Threads). Underpinned by DDIA's replication/idempotence mechanics and Clean Architecture's Humble Object (keep the fragile part thin). **Enterprise Integration Patterns** supplies the async-messaging vocabulary for the same goal — Guaranteed Delivery, Dead Letter Channel, Idempotent Receiver, Message Endpoint — when the boundary is a queue rather than a call.
 
-**Correctness under concurrency needs explicit transaction & consistency boundaries.** **DDIA ch.7** ("weak isolation hides scary bugs" — lost updates, write skew, phantoms) + **PEAA** (optimistic/pessimistic locking, Unit of Work, Offline Locks) + **DDD** (the Aggregate *is* the transactional consistency boundary).
+**Correctness under concurrency needs explicit transaction & consistency boundaries.** **DDIA ch.7** ("weak isolation hides scary bugs" — lost updates, write skew, phantoms) + **PEAA** (optimistic/pessimistic locking, Unit of Work, Offline Locks) + **DDD** / **Implementing DDD** (the Aggregate *is* the transactional consistency boundary; Vernon's rules: design *small* aggregates, reference other aggregates by identity, and accept eventual consistency between them).
 
-**Persistence is a mapped, hidden concern — and the N+1 is the classic pathology.** PEAA's catalog (Active Record vs. Data Mapper, Identity Map, Lazy Load), DDD's Repository, DDIA's storage engines beneath the ORM. Persistence stays at the edge; ORM mappings don't leak into the domain.
+**Persistence is a mapped, hidden concern — and the N+1 is the classic pathology.** PEAA's catalog (Active Record vs. Data Mapper, Identity Map, Lazy Load), DDD's Repository, DDIA's storage engines beneath the ORM. Persistence stays at the edge; ORM mappings don't leak into the domain. Below the ORM, **SQL Performance Explained** (how an index is used, why `SELECT *` over-fetches and breaks-on-add, sargable predicates, keyset over OFFSET pagination) and **Database Internals** (B-tree vs. LSM storage engines, the write-ahead log) explain the cost model the mapping hides — the layer where the N+1's sibling, the unindexed `SELECT *`, lives.
 
 **Long-lived systems evolve their contracts additively (expand-contract).** DDIA ch.4 (forward/backward compatibility; Avro/Protobuf/Thrift), Release It! ch.13–14 ("multiple versions running simultaneously is normal," backward-compatible schema migrations), Clean Architecture's OCP as the design-level analog.
 
@@ -88,7 +88,7 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 ## VI. Change Discipline (Refactoring & Migration)
 
-**The Two Hats — never mix refactoring with behavior change.** One hat at a time; never refactor while a test is red; keep refactor commits separate from feature commits. *(Refactoring ch.2; Three Laws of TDD; Google "refactors in separate CLs.")*
+**The Two Hats — never mix refactoring with behavior change.** One hat at a time; never refactor while a test is red; keep refactor commits separate from feature commits. **Tidy First?** sharpens this into a delivery rule — ship "structure" changes in their own PRs, separate from "behavior" PRs — and supplies a catalog of small, safe tidyings (guard clauses, explaining variables, cohesion order) plus the *economics* of when to tidy now vs. later (coupling cost, optionality, reversibility). *(Refactoring ch.2; Tidy First?; Three Laws of TDD; Google "refactors in separate CLs.")*
 
 **Refactoring is continuous, small-step, behavior-preserving — design emerges from it.** Evolutionary > heavy up-front design, *made safe by* continuous testing (Fowler "Is Design Dead?"); smells point to *where* (judgment, not dogma); under a safety net of characterization tests for legacy code (Feathers).
 
@@ -96,7 +96,7 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 **Manage technical debt deliberately.** Fowler's quadrant: prudent-deliberate debt with a repayment plan is fine; reckless debt is blocked. *(+ Joel Test: bug database, "fix bugs before new features.")*
 
-**Premature optimization is wrong — measure, then tune.** Clarity first; optimize against profiled hot spots; simpler code is often faster; measure percentiles, not averages (DDIA). *(Code Complete 25–26; APOSD ch.20; Effective Java 67; Refactoring; Pragmatic Programmer's rough big-O sense.)*
+**Premature optimization is wrong — measure, then tune.** Clarity first; optimize against profiled hot spots; simpler code is often faster; measure percentiles, not averages (DDIA). **Systems Performance** supplies the methodology — the USE method (utilization/saturation/errors per resource), latency-percentile analysis, "don't tune without a measured bottleneck"; **SQL Performance Explained** is the database-shaped instance (index to match the query *before* you denormalize). *(Code Complete 25–26; APOSD ch.20; Effective Java 67; Refactoring; Systems Performance; SQL Performance Explained; Pragmatic Programmer's rough big-O sense.)*
 
 ---
 
@@ -108,7 +108,7 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 **Speed and stability are not opposed.** Accelerate's headline finding — elite teams beat low performers on all four DORA metrics at once; the trade-off is an artifact of low maturity. *(Partial tension with Brooks's Law, but that's about headcount, not pipeline.)*
 
-**Config in the environment; stateless processes; observability as a prerequisite.** **12-Factor** (config as env vars never committed, logs to stdout, disposability, dev/prod parity) + **Release It!** (control plane, instrumentation, externalized state) + **OWASP A05/A09** (misconfiguration; "if you can't detect the breach you can't respond"). *(Minor tension: 12-Factor XI "apps just write to stdout" vs. ASVS ch.7 "apps must control log content to avoid PII leakage.")*
+**Config in the environment; stateless processes; observability as a prerequisite.** **12-Factor** (config as env vars never committed, logs to stdout, disposability, dev/prod parity) + **Release It!** (control plane, instrumentation, externalized state) + **OWASP A05/A09** (misconfiguration; "if you can't detect the breach you can't respond"). **Site Reliability Engineering** turns "observability is a prerequisite" into mechanism — SLIs/SLOs, error budgets, the four golden signals (latency, traffic, errors, saturation), blameless postmortems, and eliminating toil. *(Minor tension: 12-Factor XI "apps just write to stdout" vs. ASVS ch.7 "apps must control log content to avoid PII leakage.")*
 
 ---
 
@@ -116,9 +116,9 @@ Brooks is **pessimistic** about headroom (little accidental complexity left to r
 
 **Validate untrusted input at the boundary.** Treat every input as hostile until proven otherwise. *(OWASP A03 Injection / A10 SSRF; ASVS ch.5; NASA rule 7 — same discipline, framed as analyzability rather than attack defense.)*
 
-**Secure by design, not by patch.** OWASP A04 "Insecure Design" (2021) — architectural flaws ("missing threat model") can't be retrofitted; "fix before code, not in code." Backed by ASVS ch.1 (threat modeling first) and Brooks ("great designers dominate quality"). This is a precedence claim: a design/security flaw outranks a style fix.
+**Secure by design, not by patch.** OWASP A04 "Insecure Design" (2021) — architectural flaws ("missing threat model") can't be retrofitted; "fix before code, not in code." Backed by **Shostack's Threat Modeling** (the four-question frame — *what are we building, what can go wrong, what do we do about it, did we do a good job* — plus STRIDE and trust-boundary data-flow diagrams), **Building Secure and Reliable Systems** (security and reliability are intertwined design properties, designed-in not bolted-on), ASVS ch.1 (threat modeling first), and Brooks ("great designers dominate quality"). This is a precedence claim: a design/security flaw outranks a style fix.
 
-**Defense in depth; never commit secrets; least privilege.** ASVS's tiered levels (L1/L2/L3) and 14 control families; OWASP as the lightweight checklist that pairs with ASVS for depth. Strong hashing (Argon2id/bcrypt), pinned/audited dependencies, no PHI/PII in prompts, logs, or fixtures.
+**Defense in depth; never commit secrets; least privilege.** ASVS's tiered levels (L1/L2/L3) and 14 control families; OWASP as the lightweight checklist that pairs with ASVS for depth. Strong hashing (Argon2id/bcrypt), pinned/audited dependencies, no PHI/PII in prompts, logs, or fixtures. **Building Secure and Reliable Systems** anchors least privilege and zero-trust as design defaults — no ambient authority, a small trusted computing base, design for understandability and for recovery.
 
 ---
 
@@ -170,6 +170,8 @@ The library is not monolithic. These are the documented disagreements — each i
 | 11 | **Style specifics** | Google Python 2-space, Black 88-col | PEP 8 4-space, 79-col | The meta-rule (consistency > the choice) holds; pick one per language and enforce by tooling. |
 | 12 | **Governance** | Accelerate / Team Topologies — autonomous teams, lightweight approval | SE at Google — aggressive central enforcement (mandatory formatters, every change reviewed) | Centralize the *floor* (style, gates); decentralize the *choices* above it. |
 | 13 | **Reversibility ideal vs. leaks** | Hexagonal/Clean — swap any technology cleanly | Leaky Abstractions / DDIA — N+1, query plans, partial failure leak through | Design for reversibility *and* understand the layer below; don't trust the swap to be free. |
+| 14 | **Reliability vs. security on failure** | Release It! / SRE — degrade gracefully, fail *open* to stay available | Security — fail *closed*; deny on uncertainty | **Building Secure and Reliable Systems**: name the property each component optimizes — auth/secrets/authorization fail closed; non-critical reads may fail open behind a circuit breaker. |
+| 15 | **Reliability target** | Release It! — engineer for stability, "design so it doesn't fail" | SRE — 100% is the wrong target; spend an explicit *error budget* to move faster | Set an SLO; while the budget is spent, freeze risk and harden; with budget to spare, ship. Reliability is a feature with a cost, not an absolute. |
 
 ⭐ = the two headline disagreements, both flagged inside the source summaries themselves.
 
@@ -191,11 +193,12 @@ Where essentially every source that addresses the topic agrees — treat these a
 - **Coverage is a floor and a weak signal; mutation score is the real oracle.**
 - **The Two Hats — separate refactoring from behavior change.**
 - **Replace legacy incrementally; avoid big-bang rewrites.**
-- **Measure before optimizing; prefer clarity; watch percentiles.**
+- **Measure before optimizing; prefer clarity; watch percentiles** (profile the bottleneck first — the USE method, *Systems Performance*).
+- **Be deliberate at the persistence boundary** — explicit columns over `SELECT *`, indexes matched to the query's `WHERE`/`ORDER BY`, bounded result sets (*SQL Performance Explained*, PEAA, DDIA).
 - **Validate untrusted input at the boundary; never commit secrets; least privilege.**
 - **Config in the environment; observability is a prerequisite, not an afterthought.**
 - **Small, reviewable units of work; review for net-positive code health.**
-- **Minimize mutable/shared state, especially under concurrency** — and where sharing is unavoidable, guard atomicity, visibility, and liveness explicitly (in-process ≠ cross-process).
+- **Minimize mutable/shared state, especially under concurrency** — and where sharing is unavoidable, guard atomicity, visibility, and liveness explicitly (in-process ≠ cross-process; *Java Concurrency in Practice* is the canonical reference).
 
 ---
 
@@ -214,6 +217,7 @@ Every source cited above by short name (e.g. "APOSD," "DDIA," "Waldo"), with its
 | **Refactoring** | Martin Fowler (2018). *Refactoring*, 2nd ed. Addison-Wesley. ISBN 978-0134757599. Catalog: <https://refactoring.com> | [05](Resources/Books/Canon/05-Refactoring.md) |
 | **APOSD** | John Ousterhout (2018/2021). *A Philosophy of Software Design*. Yaknyam Press. ISBN 978-1732102217 | [06](Resources/Books/Canon/06-A-Philosophy-of-Software-Design.md) |
 | **WEWLC** | Michael Feathers (2004). *Working Effectively with Legacy Code*. Prentice Hall. ISBN 978-0131177055 | [07](Resources/Books/Canon/07-Working-Effectively-with-Legacy-Code.md) |
+| **Tidy First?** | Kent Beck (2023). *Tidy First?*. O'Reilly. ISBN 978-1098151249 | [34](Resources/Books/Canon/34-Tidy-First.md) |
 
 ### Books — Clean Architecture Trilogy
 
@@ -230,6 +234,38 @@ Every source cited above by short name (e.g. "APOSD," "DDIA," "Waldo"), with its
 | **PEAA** | Martin Fowler (2002). *Patterns of Enterprise Application Architecture*. Addison-Wesley. ISBN 978-0321127426 | [11](Resources/Books/Domain-Systems-Design/11-Patterns-of-Enterprise-Application-Architecture.md) |
 | **DDIA** | Martin Kleppmann (2017). *Designing Data-Intensive Applications*. O'Reilly. ISBN 978-1449373320 | [12](Resources/Books/Domain-Systems-Design/12-Designing-Data-Intensive-Applications.md) |
 | **Release It!** | Michael T. Nygard (2018). *Release It!*, 2nd ed. Pragmatic Bookshelf. ISBN 978-1680502398 | [13](Resources/Books/Domain-Systems-Design/13-Release-It.md) |
+| **Newman / Building Microservices** | Sam Newman (2021). *Building Microservices*, 2nd ed. O'Reilly. ISBN 978-1492034025 | [37](Resources/Books/Domain-Systems-Design/37-Building-Microservices.md) |
+| **EIP / Hohpe & Woolf** | Gregor Hohpe & Bobby Woolf (2003). *Enterprise Integration Patterns*. Addison-Wesley. ISBN 978-0321200686. <https://www.enterpriseintegrationpatterns.com> | [38](Resources/Books/Domain-Systems-Design/38-Enterprise-Integration-Patterns.md) |
+| **IDDD / Vernon** | Vaughn Vernon (2013). *Implementing Domain-Driven Design*. Addison-Wesley. ISBN 978-0321834577 | [41](Resources/Books/Domain-Systems-Design/41-Implementing-Domain-Driven-Design.md) |
+
+### Books — Concurrency
+
+| Short name | Full citation | Summary |
+|------------|---------------|---------|
+| **JCiP** | Brian Goetz, Tim Peierls, Joshua Bloch, Joseph Bowbeer, David Holmes, Doug Lea (2006). *Java Concurrency in Practice*. Addison-Wesley. ISBN 978-0321349606 | [29](Resources/Books/Concurrency/29-Java-Concurrency-in-Practice.md) |
+
+### Books — Performance & Reliability
+
+| Short name | Full citation | Summary |
+|------------|---------------|---------|
+| **SQL Performance Explained / Winand** | Markus Winand (2012). *SQL Performance Explained*. ISBN 978-3950307825. Free: <https://use-the-index-luke.com> | [30](Resources/Books/Performance-Reliability/30-SQL-Performance-Explained.md) |
+| **Database Internals / Petrov** | Alex Petrov (2019). *Database Internals*. O'Reilly. ISBN 978-1492040347 | [31](Resources/Books/Performance-Reliability/31-Database-Internals.md) |
+| **Systems Performance / Gregg** | Brendan Gregg (2020). *Systems Performance*, 2nd ed. Addison-Wesley. ISBN 978-0136820154 | [32](Resources/Books/Performance-Reliability/32-Systems-Performance.md) |
+| **SRE** | Beyer, Jones, Petoff, Murphy, eds. (2016). *Site Reliability Engineering*. O'Reilly. ISBN 978-1491929124. Free: <https://sre.google/books> | [33](Resources/Books/Performance-Reliability/33-Site-Reliability-Engineering.md) |
+
+### Books — Functional
+
+| Short name | Full citation | Summary |
+|------------|---------------|---------|
+| **Grokking Simplicity / Normand** | Eric Normand (2021). *Grokking Simplicity*. Manning. ISBN 978-1617296208 | [35](Resources/Books/Functional/35-Grokking-Simplicity.md) |
+| **DMMF / Wlaschin** | Scott Wlaschin (2018). *Domain Modeling Made Functional*. Pragmatic Bookshelf. ISBN 978-1680502541 | [36](Resources/Books/Functional/36-Domain-Modeling-Made-Functional.md) |
+
+### Books — Security
+
+| Short name | Full citation | Summary |
+|------------|---------------|---------|
+| **BSRS** | Adkins, Beyer, Blankinship, Lewandowski, Oprea, Stubblefield (2020). *Building Secure and Reliable Systems*. O'Reilly. ISBN 978-1492083122. Free: <https://sre.google/books> | [39](Resources/Books/Security/39-Building-Secure-and-Reliable-Systems.md) |
+| **Shostack / Threat Modeling** | Adam Shostack (2014). *Threat Modeling: Designing for Security*. Wiley. ISBN 978-1118809990 | [40](Resources/Books/Security/40-Threat-Modeling.md) |
 
 ### Books — Testing
 
