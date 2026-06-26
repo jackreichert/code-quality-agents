@@ -116,6 +116,28 @@ Warn the user if the filtered list exceeds 100 files, and offer to narrow by pas
 
 ---
 
+## Step 1.5 — Establish Project Context (reuse surface)
+
+Gather a small, **fresh** snapshot of the codebase so agents can judge whether a change *fits* — not just whether the changed lines read well in isolation. This closes the diff's two structural blind spots: **naming** (needs the surrounding domain) and **reuse / placement** (needs the rest of the repo). Computed every run; **never written to disk** — a stored map goes stale on exactly the untouched code where reuse lives, and becomes a confident liar.
+
+Keep it cheap and bounded:
+
+1. **Locate the reuse surface** — where shared / general-purpose code already lives:
+   ```bash
+   git ls-files | grep -iE '(^|/)(utils?|helpers?|shared|common|lib|core)(/|\.)' | head -50
+   ```
+   For the directories found, list their files so agents know where a reusable function *would* go.
+
+2. **Sample naming conventions** — note the local style near the changed files (casing, suffixes, domain vocabulary). Agents do the deep read; here just capture the convention so "is this name generic?" has a baseline.
+
+3. **Note the directory shape** — top-level layout (feature-oriented vs. framework-oriented), so "where should this live?" has an answer.
+
+Assemble a compact **Project Context** block (a dozen lines, not an inventory). If the repo is large, cap the reuse-surface listing and say so. Pass this block into **every** agent prompt in Step 4.
+
+> This is the **ephemeral reuse-surface scan**, not a persistent codebase map — gathered fresh each run and discarded. A stored map updated only on review passes goes stale on exactly the untouched code where reuse lives, and becomes a confident liar.
+
+---
+
 ## Step 2 — Determine Applicable Agents
 
 Parse `$ARGUMENTS` for aspect keywords:
@@ -134,6 +156,7 @@ Parse `$ARGUMENTS` for aspect keywords:
 - `gates` → quality-gates (runs tools — lint, complexity, duplication, coverage, mutation — for pass/fail vs thresholds)
 - `spec` or `specification` → quality-specification (acceptance-criteria / BDD feature-file quality)
 - `flow` or `flows` → quality-flow (trace control + data flow from entry points to sinks; taint, error propagation, resource/transaction lifecycle, N+1-across-chain)
+- `tutor` or `learn` → **Tutor Mode** — teaches the CS principle/theme, or the principles at play in a diff. Does NOT spawn a review agent or aggregate findings; runs inline and conversational (see the Tutor Mode section). It explains; it does not review or fix.
 - No arguments / `all` → run all applicable agents (see rules below)
 
 **Note on simplify routing:** `quality-refactor` now handles both modes. Mode is selected by the aspect keyword: `simplify` → Mode 1 (light), `refactor` → Mode 2 (full plan). The existing `code-simplifier` agent is no longer routed by this orchestrator.
@@ -210,19 +233,32 @@ Files in scope: [N files across M directories]
 
 ## Step 4 — Spawn Agents in Parallel
 
-**Diff mode** — pass the full diff content and file list:
+**Pass the Step 1.5 Project Context block into every agent prompt, in both modes.**
+
+**Make every finding teach.** Append this to every agent prompt: *"For each finding, include a one-clause **why** — the principle it violates and the concrete consequence — and cite the canon source when apt (e.g. `Clean Code ch.2`, `APOSD ch.4`, `Law of Demeter`). Keep it to one line. Minor findings may omit the why. The reader should come away understanding the principle, not just the patch — but do not pad: one clause, no lecture."*
+
+**Diff mode** — pass the full diff content, the file list, and the Project Context block:
 
 ```
 Task(
   prompt="Review the following git diff for code quality issues.
-  
+
+  Project context (reuse surface + conventions, from Step 1.5):
+  [project context block]
+
   Changed files: [list]
-  
+
   Diff:
   [full git diff output]
-  
-  Focus on: naming, function design, code smells, complexity, comments.
-  Use the checklist in your instructions.",
+
+  IMPORTANT — the diff is your FOCUS, not your SCOPE. Before judging, Read each
+  changed file in full for surrounding context, and Grep the repo (start from the
+  reuse surface above) to check whether new logic is duplicated elsewhere or belongs
+  in an existing shared module. Judge whether the change FITS the codebase, not just
+  whether the changed lines read well in isolation.
+
+  Focus on: naming (in domain context), function design, code smells, reuse & placement,
+  complexity, comments. Use the checklist in your instructions.",
   subagent_type="quality-code-quality",
   description="Code quality review"
 )
@@ -233,16 +269,21 @@ Task(
 ```
 Task(
   prompt="Project-wide code quality review.
-  
+
+  Project context (reuse surface + conventions, from Step 1.5):
+  [project context block]
+
   Mode: project-wide review — read and analyze the listed files in full using your Read, Grep, and Glob tools.
-  
+
   Scope: [path]
-  
+
   Files to review:
   [filtered file list, one per line]
-  
-  Focus on: naming, function design, code smells, complexity, comments.
-  Use the checklist in your instructions. Prioritize findings that appear in multiple files or indicate systemic issues.",
+
+  Focus on: naming (in domain context), function design, code smells, reuse & placement,
+  complexity, comments. Grep across the listed files for duplicated logic and reusable
+  code in the wrong place. Use the checklist in your instructions. Prioritize findings
+  that appear in multiple files or indicate systemic issues.",
   subagent_type="quality-code-quality",
   description="Code quality project scan"
 )
@@ -264,13 +305,13 @@ After all agents complete, aggregate by severity (every agent now reports Critic
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## Critical — Fix Before Committing
-- [agent] file:line — description
+- [agent] file:line — what; why: principle + consequence (source) → fix
 
 ## Important — Fix Before PR
-- [agent] file:line — description
+- [agent] file:line — what; why: principle + consequence (source) → fix
 
 ## Minor — Worth Doing
-- [agent] file:line — description
+- [agent] file:line — what → fix   (why optional — keep Minor terse)
 
 ## Strengths
 - [what's done well across agents]
@@ -416,6 +457,27 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 
 ---
 
+## Tutor Mode (`/quality tutor` | `/quality learn`)
+
+The framework's teaching leg: where the review agents *catch* and the Constitution *prevents*, the tutor *explains*. Use it to learn the CS principle or theme, or to understand the principles at play in a diff.
+
+**This mode does not spawn a sub-agent and does not produce a findings report.** Teaching is conversational — run it **inline in the main thread** so the learner can ask follow-ups. Read the teaching reference at `__SKILLS_DIR__/skills/tutor.md` and follow its contract.
+
+**The canon lives under `__SKILLS_DIR__`, not the user's project.** You are running in the user's repo, but the library you teach from is the installed framework. Read `__SKILLS_DIR__/THEMES.md`, `__SKILLS_DIR__/Resources/`, `__SKILLS_DIR__/skills/`, and `__SKILLS_DIR__/CONSTITUTION.md` by that absolute path — the relative links inside `tutor.md` are repo-internal and resolve under `__SKILLS_DIR__`.
+
+**Resolve which sub-mode from `$ARGUMENTS`:**
+
+- **Concept mode** — a topic/term/theme is given (`/quality tutor deep modules`, `/quality learn "classical vs london"`, `/quality tutor N+1`). No diff needed. Locate it in the library — `THEMES.md` for cross-cutting themes and tensions, `skills/*.md` for a single area's depth, `Resources/` for the primary source + chapter, `CONSTITUTION.md` for the rule — and teach it.
+- **PR / diff mode** — no topic, or the learner points at code / a prior `/quality` finding (`/quality tutor` on the current diff, `/quality tutor src/orders.py`). Resolve scope with **Step 1** (diff / branch / path), Read the code, then teach the principle(s) it exemplifies using their actual lines as the worked example.
+
+**Rules (from `skills/tutor.md`):**
+- Ground every claim in the curated library and **cite the source** (file + book/chapter). Don't freelance from memory; if it isn't in the library, say so.
+- **Explain, don't review or fix.** No severity, no verdict, no edits. If the learner wants the code judged or changed, point them to `/quality code` / `/quality refactor` and return to teaching the why.
+- Surface the documented tension when one exists (`THEMES.md §XI`) — teach both sides and how the framework resolves it.
+- Keep each lesson tight (short answer → why it matters → example → tension if any → source → read-next → a check question), and stay available for follow-up.
+
+---
+
 ## Usage Examples
 
 ```
@@ -436,6 +498,9 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 /quality gates                        # Objective tool-measured floor: lint, complexity, dup, coverage, mutation
 /quality spec                         # Acceptance-criteria / BDD feature-file quality
 /quality flow                         # Trace control + data flow from entry points to sinks
+/quality tutor deep modules           # Learn a concept/theme from the library (cited)
+/quality learn "classical vs london"  # Same — teaches both sides of a documented tension
+/quality tutor                        # Teach the CS principles at play in the current diff
 /quality code arch                    # Code quality + architecture
 /quality code arch refactor           # Three-way review
 /quality persistence delivery         # DB layer + deploy/migration audit (common pair)
@@ -484,6 +549,7 @@ Verdict: [SHIP IT / NEEDS WORK / SIGNIFICANT ISSUES]
 - **`/quality flow`** — trace execution, not structure. Follows control + data flow from each entry point (route, handler, `main`, consumer) to its sinks, catching bugs that live in the path between methods: untrusted input reaching a sink, errors swallowed mid-flow, leaked resources/locks, a transaction that doesn't wrap the unit of work, N+1 visible only across the call chain, partial failure across a boundary. Runs automatically as Phase 2 of `/quality deep`; invoke alone when chasing a cross-method/cross-file bug. Complements `/quality arch` (structure) — not a substitute for it.
 - **`/quality deep`** — the deep traversal. Where default `/quality` runs one agent per aspect in parallel, deep mode walks file → method, then traces flows from entry point to sink, then synthesizes one summary. Use it to onboard a subsystem, audit a critical path, or scrutinize a large feature before merge. Expensive — scope it to a path (`/quality deep src/services` or `/quality deep project src/`). Defaults to writing detail to a report file and showing only the summary; override with `--inline` / `--summary`.
 - **`/quality spec`** — upstream of code. Reviews acceptance criteria and BDD/Gherkin feature files for the qualities that make a spec a reliable single source of truth: concrete key examples, declarative (not UI-scripted) phrasing, ubiquitous language, and executable/living specs. Run it before building a feature, or when `.feature` files are in the diff. Where `/quality tests` checks the tests verify the code, `/quality spec` checks the spec expresses the right behavior.
+- **`/quality tutor`** (alias `/quality learn`) — the teaching leg. Where the review agents *catch* and the Constitution *prevents*, the tutor *explains* — grounded in the curated library and citing its sources. Name a concept or theme to learn it (`/quality tutor deep modules`), or run it on a diff/finding to learn the principles at play in your actual code. It explains rather than reviews (no findings, no fixes — those are the other agents), surfaces documented tensions (both sides + how the framework resolves them), and stays conversational for follow-ups.
 
 ### Common multi-aspect combinations
 

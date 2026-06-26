@@ -36,6 +36,8 @@ Complexity and function-length numbers pair with judgment: a long, linear, well-
 ## Project overrides
 If a `quality-gates.toml` (or `[tool.quality-gates]` block) exists at the repo root, its thresholds win over the defaults. Loosening a default is allowed only when written there — reviewable in the diff, never an unwritten exception.
 
+**Teach the why (briefly).** Gates measure, they don't opine — but when a gate FAILS, add a one-clause *why the threshold exists* (what it protects), e.g. "cyclomatic >15 → branch combinations outpace test paths and human comprehension (Article VII)". One line; passing gates need no why.
+
 ## Output Format
 
 ```

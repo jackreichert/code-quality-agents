@@ -151,6 +151,25 @@ This skill's reviewer takes a **both-and** position: short functions when extrac
 
 ---
 
+## 3.5 Reuse & Placement
+
+*Source: The Pragmatic Programmer (Hunt/Thomas) — DRY ("every piece of knowledge has a single, authoritative representation"); Refactoring (Fowler) — Rule of Three; Clean Architecture ch.21 (Martin) — Screaming Architecture / where code belongs.*
+
+The Duplicate Code smell above catches repetition **visible in the diff**. This section catches the repetition and misplacement that are only visible across the **whole repo** — the structural blind spot of any diff-scoped review. It requires reading beyond the changed lines: `Grep`/`Glob` the codebase before accepting new code.
+
+> **DRY is about knowledge, not text.** Two copies of the same *decision* that will change together are a smell; two snippets that merely look alike but represent different decisions are not (don't abstract prematurely — Rule of Three).
+
+- [ ] **Cross-file duplication** — does this logic already exist elsewhere? Grep by key tokens, signature shape, or a distinctive literal. If a near-identical implementation exists, reuse it (or unify both) rather than adding a third copy. Name the existing implementation.
+- [ ] **Wrong home** — is this logic general-purpose but living inside a feature/module where no one else will find it? General-purpose code belongs on the **reuse surface** (`utils/`, `helpers/`, `shared/`, `lib/`, `core/`, or the project's idiom). Flag **"extract to shared module"** and name the candidate location.
+- [ ] **Reinventing an existing helper** — does a shared module already provide this (date/money/string/validation, an HTTP-client wrapper, a Result/Option type)? Prefer the existing one.
+- [ ] **Convention drift** — does the new code match the naming and structure of its neighbors? Inconsistency raises the cost of reading every future change in that area (APOSD ch.17: consistency reduces cognitive load).
+
+**Test:** Could another team member find and reuse this logic six months from now — or will they write it again because it's buried in the wrong place?
+
+> A diff tells you *what changed*; it cannot tell you whether the change *fits*. Fitness — correct placement, no reuse left on the table — requires scanning the repo, not just the hunk.
+
+---
+
 ## 4. Comments
 
 *Source: Clean Code ch.4, APOSD ch.13*
@@ -423,6 +442,9 @@ The code-quality reviewer surfaces these symptoms; the architecture reviewer pre
 
 ### Code Smells
 - [SMELL TYPE] Name — File:line — Refactoring suggestion
+
+### Reuse & Placement Issues
+- [TYPE] Description — File:line — existing implementation or candidate shared location
 
 ### Comment Issues
 - [TYPE] Description — File:line

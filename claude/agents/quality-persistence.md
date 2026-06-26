@@ -155,6 +155,8 @@ Cross-reference: delivery.md § 7
 - `EXPLAIN ANALYZE` reviewed for new queries on hot paths
 - Flag: `SELECT *` in production query; missing LIMIT on user-controlled queries; OFFSET pagination on growing tables; loops issuing one INSERT per iteration
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `PEAA`, `DDIA ch.7`, `N+1`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 ```

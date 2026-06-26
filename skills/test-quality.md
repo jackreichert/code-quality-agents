@@ -2,7 +2,7 @@
 
 **Purpose:** Audit test suites for quality, completeness, and maintainability. Goes beyond coverage percentage to assess whether tests actually give you confidence to change code.
 
-**Sources:** Test-Driven Development: By Example (Beck), Growing Object-Oriented Software, Guided by Tests (Freeman/Pryce), The Art of Unit Testing 3rd ed. (Osherove), xUnit Test Patterns (Meszaros), Software Engineering at Google (Winters et al.)
+**Sources:** Test-Driven Development: By Example (Beck), Growing Object-Oriented Software, Guided by Tests (Freeman/Pryce), The Art of Unit Testing 3rd ed. (Osherove), xUnit Test Patterns (Meszaros), Unit Testing Principles, Practices, and Patterns (Khorikov), Software Engineering at Google (Winters et al.)
 
 **When to invoke:**
 - After writing tests for a new feature
@@ -137,6 +137,35 @@ Good test names are documentation. They tell you what broke when they fail — w
 - [ ] **Don't verify internals**: Mocks that verify internal method calls make tests brittle — they break when you refactor, even when behavior is unchanged
 - [ ] **One mock per test**: Multiple mocks in a single test usually means the test is too broad or the SUT has too many dependencies
 - [ ] **Avoid over-specification**: Don't assert on every method called on a mock; assert only on the one call that represents the behavior being tested
+
+### Classical (Detroit) vs. London (mockist) schools
+
+*Source: Unit Testing Principles, Practices, and Patterns (Khorikov) ch.2; Mocks Aren't Stubs (Fowler)*
+
+There are two schools of unit testing, and they disagree on what to isolate:
+- **Classical / Detroit / state-based** — isolate *tests from each other* (via fresh state), but let a test exercise the real collaborators of the unit under test. Verify the **observable outcome**. Mock only shared, out-of-process dependencies.
+- **London / mockist / interaction-based** — isolate the *unit from its collaborators* by mocking them, and verify the **interactions** (which methods were called, with what).
+
+**This framework's default is classical.** It survives refactoring better: a state-based test stays green as long as behavior is unchanged, whereas mocking internal collaborators couples the test to *how* the code works, so it breaks on a refactor that changes nothing observable. That is why the rules above say "mock only externals, never your own code." The London style is the legitimate choice in two cases: (1) the **interaction itself is the behavior** (an email is sent, an event published, an audit record written — there's no return value to assert), and (2) at a true **architectural seam**, where the collaborator is an unmanaged out-of-process dependency you don't own.
+
+- [ ] Are internal collaborators mocked (London) where a classical, state-based test would be less brittle? → prefer the real object + an outcome assertion.
+- [ ] Where a mock *is* used, is it verifying an interaction that genuinely has no observable result — or re-asserting an implementation detail? → only the former is justified.
+
+See [`../THEMES.md`](../THEMES.md) §XI (tension #2) for the cross-source debate (Khorikov/Fowler classical vs. GOOS mockist).
+
+### Integration tests against a real database
+
+*Source: Unit Testing Principles, Practices, and Patterns (Khorikov) ch.8-10; xUnit Test Patterns (Meszaros) — Database Sandbox / Transaction Rollback Teardown*
+
+The Fake row above (in-memory DB) is fine for fast feedback, but tests that must verify real query behavior, constraints, or migrations should run against the **real database engine** (a disposable container), not an in-memory substitute that behaves differently. Two isolation strategies, with a real trade-off:
+- **Clean-up between tests** (truncate / recreate, or a fresh schema per worker) — higher fidelity: the test exercises the same commit path production uses. Khorikov's recommended default.
+- **Transaction-rollback teardown** (wrap each test in a transaction, roll back at the end) — faster, but it never commits, so it hides bugs that surface only at commit (deferred constraints, triggers, post-commit hooks) and breaks if the code under test manages its own transactions.
+
+- [ ] Do DB integration tests use a real engine (containerized) rather than an in-memory stand-in when query/constraint/migration behavior is what's being verified?
+- [ ] Is the isolation strategy a deliberate choice? Prefer clean-up-between-tests for fidelity; reach for transaction-rollback only when speed forces it *and* the code under test doesn't own its transactions.
+- [ ] Is each test independent regardless of strategy (no leftover rows from a prior test)? — ties back to F.I.R.S.T. Isolated.
+
+See [`../THEMES.md`](../THEMES.md) §XI (tension #8).
 
 ---
 

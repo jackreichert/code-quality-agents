@@ -1,6 +1,6 @@
 # Book Citations
 
-All 24 books are under traditional copyright. Buy or borrow — don't redistribute.
+All books listed here are under traditional copyright — buy or borrow, don't redistribute — except SICP (#24), which MIT Press released under Creative Commons (see the Language-Specific section).
 
 ## The Canon
 
@@ -44,8 +44,10 @@ Publisher: Pearson / Prentice Hall.
 | 15 | Growing Object-Oriented Software, Guided by Tests | Freeman, Pryce | 978-0321503626 |
 | 16 | The Art of Unit Testing (3rd ed.) | Roy Osherove | 978-1617297472 |
 | 17 | xUnit Test Patterns | Gerard Meszaros | 978-0131495050 |
+| 27 | Unit Testing Principles, Practices, and Patterns | Vladimir Khorikov | 978-1617296277 |
+| 28 | Specification by Example | Gojko Adzic | 978-1617290084 |
 
-#16 publisher: Manning. Others: Addison-Wesley.
+#16, #27, #28 publisher: Manning. Others: Addison-Wesley.
 
 ## Engineering Culture & Process
 

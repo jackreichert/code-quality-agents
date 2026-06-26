@@ -1,6 +1,6 @@
 # CS Best Practices: Canonical Resources
 
-Foundation reading for clean-code skill synthesis.
+Foundation reading for clean-code skill synthesis. This file is the **per-resource index** ("which book owns which idea"); for the **cross-cutting synthesis** — themes that recur across many sources, where they converge, and where the canon disagrees with itself — see [`THEMES.md`](THEMES.md).
 
 > **Coverage note:** Not every book listed here drove the `/quality` framework's synthesis. About 10 of the 24 books here are deeply integrated into the agents (Clean Code, Refactoring, APOSD, Clean Architecture, GOOS, Art of Unit Testing, xUnit Test Patterns, Working Effectively with Legacy Code, DDD, Release It!). The remainder are listed for context, future reference, or because their concepts already filter through other primary sources. For the honest "what's actually synthesized vs. what's just listed" breakdown, see [`Code-Quality-Skills/README.md`](Code-Quality-Skills/README.md#whats-deliberately-not-synthesized).
 

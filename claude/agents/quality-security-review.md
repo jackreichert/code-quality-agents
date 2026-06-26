@@ -179,6 +179,8 @@ Targeted ASVS-informed cross-check for auth, session, admin, API, and sensitive-
 
 **Rule:** if you can't write the exploit scenario, downgrade severity. No hand-waving.
 
+**Teach the why.** Each finding already carries an exploit scenario; also state the *why* in one clause — the weakness class and its consequence — citing the standard (e.g. `CWE-89`, `OWASP A03`, `ASVS`). Keep it to one line, no lecture. The reader should leave understanding the vulnerability class, not just the patch.
+
 ## Output Format
 
 ```

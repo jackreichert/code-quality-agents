@@ -30,4 +30,5 @@ Resources/
 - **Skill synthesis**: cross-reference summaries against `/quality` agent prompts.
 - **Onboarding**: jump into a single resource without reading the whole book.
 - **Concept lookup**: see [`../CS-Best-Practices-Resources.md`](../CS-Best-Practices-Resources.md) for which resource owns which idea.
+- **Cross-cutting themes**: see [`../THEMES.md`](../THEMES.md) for the horizontal cut — the ideas that recur across many sources, where they converge, and where the canon openly disagrees with itself.
 - **Read the originals**: [`Originals/README.md`](Originals/README.md) has canonical URLs for the open-licensed sources (OWASP, 12-Factor, Google Eng Practices, style guides, PEP 8). [`Originals/Citations/`](Originals/Citations/) has URLs/ISBNs/DOIs for copyrighted material.
