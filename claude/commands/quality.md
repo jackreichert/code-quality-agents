@@ -53,21 +53,26 @@ If still empty, ask the user which files to review.
 
 Review the entire branch's work since it forked, plus any uncommitted changes on top.
 
-**Find the fork point.** Try parent candidates in priority order: `develop`, `staging`, `main`. Use the first one that exists locally or on `origin`. Prefer the remote ref (`origin/<branch>`) since the local copy may be stale; fall back to the local ref if no remote.
+**Find the true base branch.** Don't just take the first long-lived branch that exists — that picks `develop` even when the branch actually forked from `main`, over-including unrelated commits. Instead, resolve each candidate to a ref, compute its `merge-base` with HEAD, and choose the branch whose fork point is **closest to HEAD** (the fewest commits between the fork and HEAD). That is, by definition, the branch this one diverged from most recently. Prefer the remote ref (`origin/<branch>`) since the local copy may be stale; fall back to the local ref. The priority order `develop` → `staging` → `main` is only the **tie-breaker** when two candidates fork at the same commit.
 
 ```bash
-# Probe each candidate; first hit wins
+# Resolve each candidate to a usable ref (prefer origin), then pick the closest fork.
+parent=""; fork=""; best=-1
 for base in develop staging main; do
-  if git rev-parse --verify --quiet "origin/$base" >/dev/null; then
-    fork=$(git merge-base HEAD "origin/$base")
-    parent="origin/$base"
-    break
-  elif git rev-parse --verify --quiet "$base" >/dev/null; then
-    fork=$(git merge-base HEAD "$base")
-    parent="$base"
-    break
+  ref=""
+  if git rev-parse --verify --quiet "origin/$base" >/dev/null; then ref="origin/$base"
+  elif git rev-parse --verify --quiet "$base"        >/dev/null; then ref="$base"
+  fi
+  [ -z "$ref" ] && continue
+  [ "$ref" = "$(git rev-parse --abbrev-ref HEAD)" ] && continue   # skip self
+  mb=$(git merge-base HEAD "$ref") || continue
+  ahead=$(git rev-list --count "$mb"..HEAD)                       # commits HEAD is ahead of the fork
+  # Closest fork = smallest "ahead". First candidate in priority order wins ties.
+  if [ "$best" -lt 0 ] || [ "$ahead" -lt "$best" ]; then
+    best=$ahead; parent="$ref"; fork="$mb"
   fi
 done
+echo "Base branch: ${parent:-<none found>} (fork: ${fork:-?}, HEAD is $best commits ahead)"
 ```
 
 **Build the diff** — all commits on the branch + uncommitted working-tree changes:
@@ -84,7 +89,7 @@ The combined file list (branch commits ∪ working tree) feeds Step 2's auto-sel
 
 **If no parent candidate exists** (rare — fresh repo, detached HEAD, exotic setup): fall back to Case A's logic and warn the user that fork-point detection failed.
 
-**Edge case — feature-on-feature branches.** If `feature/x` was branched off `feature/y` (not `develop`), this probe will diff against `develop` and over-include `feature/y`'s commits. If the diff looks larger than expected, ask the user to confirm the base branch.
+**Edge case — feature-on-feature branches.** The closest-fork rule only ranks the long-lived candidates (`develop`/`staging`/`main`), so a branch cut from another *feature* branch (`feature/x` off `feature/y`) still diffs against the nearest long-lived ancestor and includes `feature/y`'s commits. State the detected base in the Step 3 plan (`Base branch: …`) so the user can catch a wrong base; if it looks off, ask them to confirm or pass the intended base explicitly.
 
 ### Case C — Project mode (`project` in $ARGUMENTS)
 
@@ -209,6 +214,7 @@ Before spawning, show the appropriate header:
  QUALITY ► REVIEWING
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+Base branch: [detected base + fork point, feature-branch (Case B) only]
 Changed files: [list from git diff --name-only]
 
 ◆ Spawning agents in parallel...
