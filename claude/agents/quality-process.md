@@ -128,6 +128,8 @@ Flag: commitments without concrete dates; slip patterns where slip wasn't surfac
 
 **Net stance** — this agent grades for *evidence of thought*, not for elegance. A simple change that handles edge cases and documents assumptions passes. A clever change that ignores them fails.
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `No Silver Bullet`, `Clean Coder ch.2`, `MMM`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 Tag every gap with severity: `[CRITICAL]`, `[IMPORTANT]`, or `[MINOR]`.

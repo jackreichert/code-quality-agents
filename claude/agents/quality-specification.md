@@ -52,6 +52,8 @@ Full reference: __SKILLS_DIR__/skills/specification.md
 - Boundaries specified, not just happy path — the `≥`→`>` mutant should be killed by a boundary scenario.
 - Run periodically/CI with progress reporting (slow); soft mode for routine runs.
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `Specification by Example`, `BDD`, `Ubiquitous Language`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 ```

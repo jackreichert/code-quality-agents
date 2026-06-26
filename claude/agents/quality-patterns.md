@@ -172,6 +172,8 @@ Naming the pattern is still useful for intent; writing the verbose 1995 code oft
 
 The bar: **the pattern must clarify intent, not obscure it.** If reviewers need a comment to understand why the pattern is there, it's the wrong pattern.
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `GoF`, `APOSD ch.19`, `Head First DP`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 ```

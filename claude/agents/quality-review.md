@@ -92,6 +92,8 @@ Earlier dimensions outrank later ones. A perfect-style change with the wrong des
 - **Important (80–89)** — should fix before opening PR
 - **Suggestion** — optional cleanup or refactor; preserves behavior
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `Google Eng Practices`, `Clean Code`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; suggestions may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 Start with: scope reviewed + mode chosen.

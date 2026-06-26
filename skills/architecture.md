@@ -2,7 +2,7 @@
 
 **Purpose:** Structural code review — SOLID compliance, dependency direction, coupling/cohesion, layer violations, module boundaries, DDD tactical patterns.
 
-**Sources:** Clean Architecture (Martin), SOLID Principles articles (Martin), Domain-Driven Design (Evans), Patterns of Enterprise Application Architecture (Fowler), "On the Criteria to Be Used in Decomposing Systems into Modules" (Parnas 1972), Software Engineering at Google (Winters et al.)
+**Sources:** Clean Architecture (Martin), SOLID Principles articles (Martin), Domain-Driven Design (Evans), Patterns of Enterprise Application Architecture (Fowler), "On the Criteria to Be Used in Decomposing Systems into Modules" (Parnas 1972), A Philosophy of Software Design (Ousterhout), Software Engineering at Google (Winters et al.)
 
 **When to invoke:**
 - When designing a new module, service, or class hierarchy
@@ -188,6 +188,20 @@ A new engineer looking at top-level folders should see `Orders/`, `Billing/`, `S
 
 **Flag:** top-level directory matches the framework's recommended layout (Rails MVC, Django apps, Spring Boot conventions) without business-domain organization on top; "find the order code" requires opening 5 framework folders.
 
+### Boundaries Are Not Services
+
+*Source: Clean Architecture (Martin) ch.27 "Services: Great and Small"*
+
+An architectural boundary is created by the **direction of dependencies** (the Dependency Rule plus an interface), *not* by a network hop. Splitting code into separate services or processes does not, by itself, decouple anything — two services that must change and deploy together are a **distributed monolith**: all the cost of the network, none of the independence. Conversely, a well-factored monolith can have genuinely independent components with no network between them.
+
+- [ ] Is a proposed service split justified by an actual need (independent scaling, deployment, team ownership, fault isolation) — or by the assumption that "microservice = decoupled"?
+- [ ] Do the would-be services share a database, a schema, or a release cadence? If so, the boundary is cosmetic.
+- [ ] Could the same decoupling be achieved with an in-process module boundary (an interface + the dependency rule) at a fraction of the operational cost?
+
+**Flag:** "we'll make it a microservice so it's decoupled"; services that always deploy together; a network boundary introduced where an interface would do.
+
+> Decoupling comes from boundaries, not from deployment topology. The operational concerns of *running* across a process boundary — Waldo's four differences — are reviewed in [`distributed.md`](distributed.md); this check is about whether the boundary should be a service at all.
+
 ---
 
 ## 3. Coupling & Cohesion
@@ -215,6 +229,21 @@ A new engineer looking at top-level folders should see `Orders/`, `Billing/`, `S
 - [ ] Is the implementation detail (algorithm, data structure, external system) hidden behind a stable interface?
 - [ ] If the hidden decision changes, how many modules change? If >1, the hiding is incomplete
 - [ ] Are modules hiding implementation from each other, or just from clients?
+
+### Module Depth (APOSD)
+
+*Source: A Philosophy of Software Design (Ousterhout) ch.4-5*
+
+Parnas tells you *what* to hide (a likely-to-change decision); Ousterhout adds a way to judge *how well* you hid it. A module's interface is its **cost** (what every caller must understand); its implementation is its **value**. The best modules are **deep** — a small, simple interface over a large, rich implementation (the canonical example is a file-I/O API: a few calls hiding buffering, scheduling, and device drivers). **Shallow** modules — where the interface is nearly as complex as the implementation — add cost without hiding much.
+
+- [ ] Is each module's interface small relative to the functionality it provides (deep, good), or does the signature expose nearly everything the implementation does (shallow, bad)?
+- [ ] Are there **pass-through methods** — a method that does nothing but call another with the same signature? They add interface with no value.
+- [ ] Are there **pass-through variables** threaded through many layers just to reach a distant consumer? Same leakage, different shape.
+- [ ] Does splitting a class into many small classes *raise* the total interface surface callers must learn? Many shallow classes can be worse than one deep one.
+
+**Test:** Weigh the interface (params, public methods, exceptions, required call-ordering) against the implementation behind it. If the ratio is near 1:1, the module isn't earning its boundary.
+
+> **Tension — deep modules vs. small functions.** This is the one place where APOSD and Clean Code pull apart: Clean Code pushes toward many small functions and classes; APOSD warns that aggressive splitting multiplies shallow interfaces. The framework's resolution lives in [`code-quality.md`](code-quality.md) §0.5 — optimize for the *next reader's* time-to-understanding, extract only when a name genuinely abstracts, and default to fewer/deeper units when in doubt (see also [`../THEMES.md`](../THEMES.md) §XI, tension #1). At the **module/architecture** layer reviewed here, the bias is explicitly toward depth.
 
 ---
 

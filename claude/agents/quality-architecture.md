@@ -166,6 +166,8 @@ Answer briefly at the end:
 2. **Swap test**: Swapping the database — what non-infrastructure code changes?
 3. **Cycles**: Any circular dependencies?
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `Clean Architecture ch.22`, `APOSD ch.4`, `Parnas 1972`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 Tag every issue with severity: `[CRITICAL]`, `[IMPORTANT]`, or `[MINOR]`.

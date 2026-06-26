@@ -15,7 +15,7 @@ This is opt-in and always-on once imported — it is **not** a slash command.
   Claude Code resolves `@`-imports at load time, so the rules ride along on every turn.
 - **Copilot / Cursor / Continue** — paste the articles below into your repo-root `AGENTS.md` (or the tool's per-repo instructions file).
 
-Each article is a *summary*. The authoritative, citation-rich reasoning lives in the matching `skills/*.md` — follow the pointer when a rule needs justification or nuance.
+Each article is a *summary*. The authoritative, citation-rich reasoning lives in the matching `skills/*.md` — follow the pointer when a rule needs justification or nuance. Where two rules pull apart, [`THEMES.md`](THEMES.md) maps the cross-source tensions and how the framework resolves each.
 
 ---
 
@@ -40,7 +40,7 @@ When two rules pull in opposite directions, resolve in this fixed order — **ea
 - **Names reveal intent.** A reader infers purpose in <3 seconds. Nouns for classes, verbs for methods. Units and constraints in the name (`timeout_ms`, `max_retries`). No `Manager`/`Processor`/`Data`/`Info` filler. No magic numbers.
 - **Functions do one thing.** One responsibility, ~20–30 lines as a soft ceiling. Extract a nested block only when its name genuinely *abstracts* — not to hit a line count.
 - **0–2 arguments ideal, ≤3.** No boolean flags that select behavior — split the function.
-- **DRY, but not prematurely.** Two copies that will diverge are a smell; two that coincidentally match are not.
+- **DRY, but not prematurely.** Before adding a function, check whether the logic already exists or belongs in a shared module — don't bury general-purpose code where the next person will re-implement it. Two copies that will diverge are a smell; two that coincidentally match are not (Rule of Three).
 - **Comments explain *why*, not *what*.** Capture invariants, trade-offs, and constraints code can't express. Delete comments that paraphrase the code.
 - **Functional discipline.** Prefer pure functions and immutability. Push I/O and side effects to the boundaries; keep the core deterministic. Declarative (`map`/`filter`/`reduce`) over imperative loops where it reads clearer. Early returns over nested conditionals.
 - **Fail fast, fail loud.** Raise specific, meaningful exceptions early; never silently swallow them; never signal errors with `None` or magic values — raise, or return a Result. Log at the appropriate level (debug/info/warn/error).

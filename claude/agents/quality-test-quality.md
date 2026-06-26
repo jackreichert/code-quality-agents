@@ -139,6 +139,8 @@ Example-based tests verify cases the engineer thought of. Property-based tests a
 
 Tools: Hypothesis (Python), fast-check (JS/TS), QuickCheck (Haskell), jqwik (Java), proptest (Rust).
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `F.I.R.S.T.`, `GOOS ch.18`, `Khorikov ch.2`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 Tag every issue with severity: `[CRITICAL]`, `[IMPORTANT]`, or `[MINOR]`.

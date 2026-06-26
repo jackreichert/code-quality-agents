@@ -113,6 +113,8 @@ Cross-reference: architecture.md § 5
 - Shed load at edge before consuming capacity
 - Chaos engineering on critical paths in production
 
+**Teach the why.** Each finding carries a one-clause *why* — the principle it violates and the concrete consequence — citing the canon source when apt (e.g. `Waldo 1994`, `DDIA ch.8`, `Release It!`). Augment the finding lines below to the shape `… — what; why: principle + consequence (source) → fix`. One line, no lecture; Minor findings may omit the why. The reader should leave understanding the principle, not just the patch.
+
 ## Output Format
 
 Tag findings with the Waldo category (Latency / Memory / Partial Failure / Concurrency) when applicable.

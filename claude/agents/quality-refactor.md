@@ -19,6 +19,8 @@ Full reference: __SKILLS_DIR__/skills/refactor.md
 
 ---
 
+**Teach the why.** Each recommendation states a one-clause *why* — the smell/principle it addresses and what the move buys (readability, testability, decoupling, safer change) — citing the source when apt (e.g. `Refactoring`, `WELC ch.25`, Rule of Three). One line, no lecture. The reader should leave understanding the smell, not just the mechanical steps.
+
 ## Mode Selection
 
 Pick the mode that fits the request:

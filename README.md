@@ -14,7 +14,7 @@ Each agent is a focused lens. The orchestrator picks which lenses are relevant t
 The framework is a **distillation of the canonical CS literature** into agent-executable form. The pipeline:
 
 1. **Source selection.** A reading list of ~24 canonical books plus key articles and papers (Clean Code, Refactoring, A Philosophy of Software Design, Clean Architecture, GOOS, Designing Data-Intensive Applications, PEAA, Release It!, Continuous Delivery, GoF, the OWASP standards, etc.) — the full inventory lives in [`CS-Best-Practices-Resources.md`](CS-Best-Practices-Resources.md).
-2. **Per-source summaries.** Each book/article was summarized into a structured note in [`Resources/`](Resources/) (Books, Articles, Papers, Standards, Originals). These summaries capture the principles, smell catalogs, patterns, and counterpoints from each source — not full reproductions, but enough to drive synthesis.
+2. **Per-source summaries.** Each book/article was summarized into a structured note in [`Resources/`](Resources/) (Books, Articles, Papers, Standards, Originals). These summaries capture the principles, smell catalogs, patterns, and counterpoints from each source — not full reproductions, but enough to drive synthesis. A cross-cutting synthesis of these summaries — the themes that recur across sources and the points where the canon disagrees with itself — lives in [`THEMES.md`](THEMES.md).
 3. **Cross-source synthesis into skills.** The summaries were synthesized into ~12 topical **skill documents** in [`skills/`](skills/) — the canonical, human-readable references. Each skill cites the specific chapters and articles that drove each section, and reconciles tensions between sources (e.g., Clean Code ch.4 vs. APOSD ch.12-15 on comments).
 4. **Agent compilation.** Each skill is compiled into a concise **agent prompt** at `~/.claude/agents/quality-*.md`. The agents are the executable form; the skill files are the reasoning trail.
 5. **Orchestration.** The `/quality` slash command routes a diff to the relevant agents, runs them in parallel, normalizes severity, and aggregates the report.
@@ -103,12 +103,15 @@ The framework keeps three synchronized copies of every agent (canonical → bund
 | `skills/gates.md` | Objective tool-measured floor: lint, cyclomatic complexity, function length, duplication, coverage, mutation score, CRAP — runs tools and reports pass/fail vs explicit thresholds | `~/.claude/agents/quality-gates.md` |
 | `skills/specification.md` | Acceptance-criteria / BDD feature-file quality: key examples, declarative phrasing, ubiquitous language, executable & living specs, acceptance-level mutation | `~/.claude/agents/quality-specification.md` |
 | _cross-cutting: `security-review` + `distributed` + `persistence` + `code-quality`_ | Flow tracing — control + data flow from entry points to sinks: taint (source→sink), error propagation, resource/transaction lifecycle, N+1-across-chain, cross-boundary partial failure. Runs as Phase 2 of `/quality deep`; standalone via `/quality flow` | `~/.claude/agents/quality-flow.md` |
+| `skills/tutor.md` | Grounded CS tutor — teaches a concept/theme from the library, or the principles at play in a PR/diff; cites sources, surfaces tensions, explains rather than reviews | — (inline via `/quality tutor` \| `/quality learn`) |
 
 ### Workflow & Supporting Docs
 
 | File | Focus | Agent file |
 |------|-------|-----------|
 | `README.md` | Sources, lineage, exclusions, and update guide for this framework | — |
+| `CS-Best-Practices-Resources.md` | Per-source index — every book, article, and paper that informed the framework, and which idea each one owns | — |
+| `THEMES.md` | Cross-cutting synthesis of the `Resources/` library — the themes that recur across sources, where they converge, and the documented tensions (with a resolution map keyed to the skills) | — |
 | `skills/process.md` | Planning discipline: pre-flight (edge cases, deps, alternatives) + post-validation (Big-O, requirements, assumptions) | `~/.claude/agents/quality-process.md` |
 | `CONSTITUTION.md` | Write-time prevention layer — the skills distilled into always-on imperative rules, a conflict-precedence order, numeric gate thresholds, and a Definition of Done. Loaded via a `CLAUDE.md` `@`-import. | — |
 | `hooks/pre-commit` | Opt-in git hook that runs the fast gates (lint + complexity) on staged files and blocks the commit on a breach. See `hooks/README.md`. | — |
@@ -199,6 +202,7 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
   - ch.13-14 Comments, Choosing Names → Comments / Naming sections
 - **Clean Architecture** — Robert C. Martin (2017)
   - ch.6 Functional Programming → FP section (the three-paradigm framing)
+  - ch.21 Screaming Architecture → Reuse & Placement section (where general-purpose code belongs)
 - **Refactoring 2nd ed.** — Martin Fowler (2018)
   - ch.3 Bad Smells in Code → Code Smells categories (Bloaters, OO Abusers, Change Preventers, Dispensables, Couplers)
 - **Code Complete 2nd ed.** — Steve McConnell (2004)
@@ -207,7 +211,7 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
   - ch.31 Layout and Style → Formatting section
 - **The Art of Readable Code** — Boswell & Foucher (2011) → Naming section surface clarity
 - **The Pragmatic Programmer** — Hunt & Thomas (1999/2019)
-  - DRY, fail fast → Code Smells / Error Handling
+  - DRY (knowledge, not text), fail fast → Code Smells / Error Handling / Reuse & Placement
   - ch.4 Design by Contract → Structure & Contracts section
 
 **Articles & Papers**
@@ -241,6 +245,9 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
   - Part IV ch.15 Distillation → Strategic DDD subsection (Core / Generic / Supporting subdomains)
 - **Clean Architecture** — Robert C. Martin (2017)
   - ch.21 Screaming Architecture → Screaming Architecture subsection
+  - ch.27 Services: Great and Small → Boundaries Are Not Services subsection
+- **A Philosophy of Software Design** — John Ousterhout (2018/2021)
+  - ch.4-5 Deep modules, Information hiding → Module Depth subsection (interface-as-cost vs. implementation-as-value; the deep-vs-small-functions tension, resolved to `code-quality.md` §0.5)
 
 **Articles & Papers**
 - **"On the Criteria to Be Used in Decomposing Systems into Modules"** — D.L. Parnas (1972) → Information Hiding section
@@ -293,6 +300,10 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
   - Test double taxonomy (Stub, Mock, Spy, Fake, Dummy) → Test Doubles section
 - **xUnit Test Patterns: Refactoring Test Code** — Gerard Meszaros (2007)
   - Test smell catalog → Test Smells section (Obscure, Eager, Mystery Guest, Fragile, Slow, Flaky, Hard-Coded Test Data, Irrelevant Information, Shared Fixture)
+  - Database Sandbox / Transaction Rollback Teardown → Test Doubles section (DB isolation strategy)
+- **Unit Testing Principles, Practices, and Patterns** — Vladimir Khorikov (2020)
+  - ch.2 The two schools of unit testing → Test Doubles section (Classical/Detroit vs. London/mockist; framework default is classical)
+  - ch.8-10 Integration testing → Test Doubles section (real-DB integration tests; clean-up-between-tests vs. transaction-rollback isolation)
 - **Software Engineering at Google** — Winters et al. (2020)
   - ch.11 The Beyoncé Rule → Beyoncé Rule subsection ("if you liked it, then you shoulda put a test on it")
   - chs.11-14 Testing → Coverage Analysis + Test Pyramid sections
@@ -305,6 +316,7 @@ Below: the books, articles, and chapters that drove each skill's content. Citati
 **Articles & Concepts**
 - **Test Pyramid** — Mike Cohn, *Succeeding with Agile* (2009) → Test Pyramid subsection
 - **Testing Trophy** — Kent C. Dodds (kentcdodds.com) → Testing Trophy variant (frontend-heavy contexts)
+- **Mocks Aren't Stubs** — Martin Fowler (martinfowler.com) → Test Doubles section (classical vs. mockist framing)
 
 ---
 
@@ -640,24 +652,6 @@ echo "// test comment" >> src/some-file.ts
 | Agents disagree about a finding | Expected — different lenses | Orchestrator preserves the most severe rating during deduplication |
 
 If output is consistently broken, smoke-test a single agent directly via the `Task` tool to isolate whether the bug is in the orchestrator or the agent.
-
----
-
-## GSD Integration
-
-`/quality` composes naturally with the GSD workflow. Recommended insertion points:
-
-| GSD command | When to add `/quality` | Why |
-|-------------|------------------------|-----|
-| Between `/gsd:execute-phase` and `/gsd:commit-phase` | Run `/quality` on the phase's changes | Catches issues before atomic phase commit |
-| Before `/gsd:ship` | Run `/quality code arch tests security` | Comprehensive pre-PR review |
-| After `/gsd:verify-work` validates UAT criteria | Run `/quality process` | Audits planning discipline retroactively |
-
-**Not yet integrated automatically** — these are manual additions to your workflow. If the integration becomes standard practice, candidates for automation:
-- Add `/quality` invocation to `gsd-verifier`'s checklist
-- Add a workflow toggle in `planning/config.json`: `workflow.quality_gate: true`
-
-For now, run `/quality` manually at the points above. If you find yourself doing it consistently, that's the signal to automate.
 
 ---
 
