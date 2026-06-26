@@ -35,16 +35,21 @@ jobs:
         run: |
           set -e
           expected_agents=(
-            quality-architecture quality-code-quality quality-delivery
-            quality-distributed quality-gates quality-patterns
-            quality-persistence quality-process quality-refactor
-            quality-review quality-security-review quality-specification
-            quality-test-quality
+            quality-architecture quality-code-quality quality-concurrency
+            quality-delivery quality-distributed quality-flow
+            quality-gates quality-patterns quality-persistence
+            quality-process quality-refactor quality-review
+            quality-security-review quality-specification quality-test-quality
           )
           for name in "${expected_agents[@]}"; do
             test -f "/tmp/fake-claude/agents/${name}.md" \
               || { echo "missing: ${name}.md"; exit 1; }
           done
+          # Guard against drift: the deployed count must equal the expected count,
+          # so a newly added agent can't slip in untested.
+          deployed=$(find /tmp/fake-claude/agents -name 'quality-*.md' | wc -l)
+          test "$deployed" -eq "${#expected_agents[@]}" \
+            || { echo "agent count drift: deployed=$deployed expected=${#expected_agents[@]}"; exit 1; }
           test -f /tmp/fake-claude/commands/quality.md \
             || { echo "missing: commands/quality.md"; exit 1; }
 
@@ -83,4 +88,67 @@ jobs:
           if echo "$out" | grep -qE "would update "; then
             echo "bundle round-trip is not a no-op"
             exit 1
+          fi
+
+      - name: Personalization & linking (--name / --copilot / --link)
+        run: |
+          set -e
+          # Vendor prefix with an @import line that must be stripped when inlined.
+          printf '## Vendor Rules\n\n- a placeholder vendor rule\n\n@%s/CONSTITUTION.md\n' \
+            "$GITHUB_WORKSPACE" > /tmp/prefix.md
+
+          HOME=/tmp/fake-home bash install.sh \
+            --claude-home /tmp/fake-claude \
+            --link --name "Test User" \
+            --copilot --copilot-prefix /tmp/prefix.md
+
+          # 1. The git-tracked CONSTITUTION.md must NEVER be personalized.
+          grep -q 'Hey __USER_NAME__' CONSTITUTION.md \
+            || { echo "canonical CONSTITUTION.md lost its __USER_NAME__ placeholder"; exit 1; }
+          if grep -q 'Hey Test User' CONSTITUTION.md; then
+            echo "FAIL: greeting name leaked into git-tracked CONSTITUTION.md"; exit 1
+          fi
+
+          # 2. The deployed copy (gitignored) carries the name.
+          grep -q 'Hey Test User' instructions/CONSTITUTION.local.md \
+            || { echo "personalized copy missing the greeting name"; exit 1; }
+
+          # 3. Self-contained Copilot file: name present, no leftover placeholder,
+          #    vendor prefix inlined, and the prefix's @import line stripped.
+          grep -q 'Hey Test User' instructions/copilot-instructions.md || { echo "copilot file missing name"; exit 1; }
+          # Check the GREETING specifically — Article IX's prose legitimately mentions the
+          # literal __USER_NAME__ token, so a blanket grep would false-positive.
+          if grep -q 'Hey __USER_NAME__' instructions/copilot-instructions.md; then echo "copilot greeting still has placeholder"; exit 1; fi
+          grep -q 'Vendor Rules' instructions/copilot-instructions.md || { echo "vendor prefix not inlined"; exit 1; }
+          if grep -qE '^@.*CONSTITUTION(\.local)?\.md$' instructions/copilot-instructions.md; then
+            echo "prefix @import line was not stripped from the inlined copy"; exit 1
+          fi
+
+          # 4. Claude import points at the personalized copy, exactly once.
+          n=$(grep -cE '^@.*CONSTITUTION(\.local)?\.md$' /tmp/fake-claude/CLAUDE.md)
+          test "$n" -eq 1 || { echo "expected exactly 1 Constitution import, got $n"; exit 1; }
+          grep -qE '^@.*instructions/CONSTITUTION\.local\.md$' /tmp/fake-claude/CLAUDE.md \
+            || { echo "Claude import not pointed at the personalized copy"; exit 1; }
+
+      - name: Personalization idempotency (re-run without --name preserves the name)
+        run: |
+          set -e
+          HOME=/tmp/fake-home bash install.sh \
+            --claude-home /tmp/fake-claude \
+            --link --copilot --copilot-prefix /tmp/prefix.md
+          # Name preserved from the existing deployed copy (no --name given).
+          grep -q 'Hey Test User' instructions/CONSTITUTION.local.md \
+            || { echo "name not preserved on re-run without --name"; exit 1; }
+          # Import must not be duplicated.
+          n=$(grep -cE '^@.*CONSTITUTION(\.local)?\.md$' /tmp/fake-claude/CLAUDE.md)
+          test "$n" -eq 1 || { echo "Constitution import duplicated on re-run, got $n"; exit 1; }
+
+      - name: Uninstall tears down the personalized copy + import
+        run: |
+          set -e
+          HOME=/tmp/fake-home bash install.sh --claude-home /tmp/fake-claude --uninstall
+          test ! -f instructions/CONSTITUTION.local.md \
+            || { echo "uninstall left the personalized copy behind"; exit 1; }
+          if grep -qE '^@.*CONSTITUTION(\.local)?\.md$' /tmp/fake-claude/CLAUDE.md; then
+            echo "uninstall left a Constitution import line behind"; exit 1
           fi
